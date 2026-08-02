@@ -1,0 +1,78 @@
+generated: '2026-08-02'
+method: searched
+source: https://github.com/picarro/sam-foup-public/blob/master/README.md
+notes: >-
+  Picarro ships a real, documented simulation mode: `picarro-edge` installs and starts in
+  simulation by default, so the whole FOUP / MeasurementSet gRPC surface can be exercised
+  end to end without an instrument. This is the provider's own published test posture — no
+  test values are invented here. There are no test API keys or hosted sandbox tenants;
+  the sandbox is the locally installed edge server itself.
+mode:
+  name: simulation
+  default: true
+  activation: >-
+    Installing picarro-sam-foup-edge starts `picarro-edge` as a systemd service in
+    simulation mode. Run it interactively with `sudo systemctl stop picarro-edge` then
+    `/usr/sbin/picarro-edge`.
+  endpoint: localhost:3343 (plaintext gRPC)
+  platform_endpoint: localhost:7528 (plaintext gRPC)
+simulated:
+  - service: picarro.sam.foup.FOUP
+    supported: true
+    detail: >-
+      Control functions run together with the MeasurementSet simulator (a job requires a
+      valid measurement set name). Emits op_status, job_status, job_result and
+      reprocessed_result signals as the run progresses.
+  - service: picarro.sam.ms.MeasurementSet
+    supported: true
+    detail: >-
+      Control functions run together with the FOUP simulator. Emits ms_op_response and
+      suggested_ms during operations.
+  - service: picarro.sam.controller.Controller
+    supported: partial
+    detail: Observation is present but generates no health alerts or other events.
+  - service: CRDS Data
+    supported: false
+    detail: CRDS data functions are not simulated.
+published_test_values:
+  - kind: measurement_set_name
+    value: FOUP
+    description: The standard measurement set present on every system; usable immediately in simulation.
+  - kind: compound_id
+    value: 3776
+    description: Isopropyl Alcohol — mandatory cid, must be present in every custom measurement set.
+  - kind: compound_id_list
+    value: [3776, 180, 241, 284, 10911, 66110]
+    description: Example cid list published in the README for `add_measurement_set "My First MS" ...`.
+  - kind: action
+    value: [MEASURE_1, MEASURE_2]
+    description: FOUP job action types accepted by start_job (ACTION_MEASURE_1 / ACTION_MEASURE_2 in ProtoBuf).
+  - kind: duration_seconds
+    value: 90
+    description: Example standard measurement duration from the README quickstart.
+  - kind: duration_seconds
+    value: 300
+    description: Example extended VOC measurement duration (`extended` flag).
+  - kind: measurement_set_slots
+    value: 9
+    description: Empty measurement-set slots available on a first install, excluding the standard "FOUP" set.
+worked_examples:
+  - 'foup-api-tool get_info'
+  - 'foup-api-tool start_job MEASURE_1 "My First Foup" 90 "FOUP"'
+  - 'foup-api-tool start_job MEASURE_1 "My Extended Foup" 300 "FOUP" extended'
+  - 'foup-api-tool abort_job RUN_ID'
+  - 'foup-api-tool get_results RUN_ID'
+  - 'foup-api-tool monitor'
+  - 'controller-api-tool monitor analyzer_health analyzer_driver'
+  - 'measurementset-api-tool add_measurement_set "My First MS" 3776 180 241 284 10911 66110'
+  - 'grpcui -plaintext localhost:3343'
+console:
+  name: gRPC-UI request builder
+  note: >-
+    Reflection is enabled on both servers, so grpcui gives an interactive browser request
+    builder against the simulated services. Server streaming (watch) is not supported by
+    grpcui.
+x-evidence:
+  fetched: '2026-08-02'
+  url: https://raw.githubusercontent.com/picarro/sam-foup-public/master/README.md
+  http_status: 200

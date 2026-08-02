@@ -1,0 +1,185 @@
+generated: '2026-08-02'
+method: derived
+source:
+  - grpc/picarro-sam-foup-foup.proto
+  - grpc/picarro-sam-foup-measurementset.proto
+  - grpc/picarro-sam-foup-controller.proto
+  - grpc/picarro-sam-foup-status.proto
+notes: >-
+  Entity graph derived from Picarro's published ProtoBuf messages. There is no OpenAPI, so
+  relationships are read from ProtoBuf field types (nested messages, `repeated`, and
+  id-reference fields) rather than JSON Schema $ref. Every entity, field and enum below
+  appears verbatim in the .proto files.
+identifiers:
+  - {field: job_id, type: uint64, description: 'Server-assigned unique run identifier returned by start_job; keys abort_job, get_result and every job signal.'}
+  - {field: foup_id, type: string, description: 'Caller-supplied unique identifier for the FOUP (front-opening unified pod) being measured.'}
+  - {field: measurement_set_name, type: string, description: 'Friendly name of a measurement set; also addressable by slot number 1-9.'}
+  - {field: cid, type: uint64, description: 'Compound identifier. cid 3776 = Isopropyl Alcohol and is mandatory in every measurement set.'}
+  - {field: mapping_key, type: string, description: 'Analyzer identity on Controller signals, e.g. "Picarro_8008-AMSADS3008".'}
+entities:
+  - name: Job
+    message: picarro.sam.foup.JobStatus
+    domain: measurement
+    primary_key: job_id
+    fields:
+      - {name: job_id, type: uint64}
+      - {name: foup_id, type: string}
+      - {name: automatic, type: bool, description: Automatic maintenance task}
+      - {name: action, type: ActionType}
+      - {name: scheduled_duration, type: google.protobuf.Duration}
+      - {name: measurement_set_name, type: string}
+      - {name: state, type: JobState}
+      - {name: starttime, type: google.protobuf.Timestamp}
+      - {name: elapsed_duration, type: google.protobuf.Duration}
+    relationships:
+      - {type: belongs_to, target: MeasurementSet, via: measurement_set_name}
+      - {type: belongs_to, target: FOUP, via: foup_id}
+      - {type: has_one, target: JobResult, via: job_id}
+      - {type: has_many, target: ReprocessedResult, via: job_id}
+  - name: JobInputs
+    message: picarro.sam.foup.JobInputs
+    domain: measurement
+    description: Request body for start_job.
+    fields:
+      - {name: action, type: ActionType, values: 'MEASURE_1, MEASURE_2, CLEAN_1, CLEAN_2'}
+      - {name: foup_id, type: string}
+      - {name: duration, type: google.protobuf.Duration}
+      - {name: measurement_set_name, type: string}
+    relationships:
+      - {type: belongs_to, target: MeasurementSet, via: measurement_set_name}
+  - name: JobIdentity
+    message: picarro.sam.foup.JobIdentity
+    domain: measurement
+    description: 'Handle used to abort a job, fetch a result, or scope a query. JobIdentityList is the repeated form (repeated uint64 job_id).'
+  - name: JobResult
+    message: picarro.sam.foup.JobResult
+    domain: measurement
+    primary_key: job_id
+    fields:
+      - {name: job_id, type: uint64}
+      - {name: foup_id, type: string}
+      - {name: action, type: ActionType}
+      - {name: state, type: JobState}
+      - {name: measurement_set_name, type: string}
+      - {name: endtime, type: google.protobuf.Timestamp}
+      - {name: 'oneof: failure', type: picarro.status.Error}
+      - {name: 'oneof: concentrations', type: Concentrations}
+    relationships:
+      - {type: belongs_to, target: Job, via: job_id}
+      - {type: has_one, target: Concentrations, via: 'oneof concentrations'}
+      - {type: has_one, target: Error, via: 'oneof failure'}
+  - name: ReprocessedResult
+    message: picarro.sam.foup.ReprocessedResult
+    domain: measurement
+    fields:
+      - {name: job_id, type: uint64}
+      - {name: foup_id, type: string}
+      - {name: reprocess_time, type: google.protobuf.Timestamp}
+      - {name: compound_hunting_interference, type: bool}
+    relationships:
+      - {type: belongs_to, target: Job, via: job_id}
+  - name: Concentrations
+    message: picarro.sam.foup.Concentrations
+    domain: measurement
+    relationships:
+      - {type: has_many, target: CompoundDetail, via: 'repeated concentrations'}
+  - name: CompoundDetail
+    message: picarro.sam.foup.CompoundDetail
+    domain: chemistry
+    primary_key: cid
+    fields:
+      - {name: cid, type: uint64}
+      - {name: name, type: string}
+      - {name: concentration, type: double}
+      - {name: unit, type: Unit, values: 'UNIT_UNSPECIFIED, UNIT_PPB'}
+    relationships:
+      - {type: belongs_to, target: Concentrations, via: parent}
+      - {type: belongs_to, target: Compound, via: cid}
+  - name: MeasurementSet
+    message: picarro.sam.ms.MeasurementSetDetail
+    domain: configuration
+    primary_key: measurement_set_name
+    alternate_key: measurement_set_number (slot 1-9)
+    fields:
+      - {name: measurement_set_name, type: string}
+      - {name: 'oneof: target_cids', type: CIDList}
+      - {name: 'oneof: suggested_cids', type: CIDConfidenceList}
+    relationships:
+      - {type: has_many, target: Compound, via: 'target_cids.cids'}
+      - {type: has_many, target: CIDConfidence, via: 'suggested_cids.cid_confidences'}
+      - {type: has_many, target: Job, via: measurement_set_name}
+  - name: CIDConfidence
+    message: picarro.sam.ms.CIDConfidence
+    domain: configuration
+    fields:
+      - {name: cid, type: uint64}
+      - {name: confidence, type: double}
+    relationships:
+      - {type: belongs_to, target: Compound, via: cid}
+  - name: Compound
+    message: 'implicit — addressed by cid throughout'
+    domain: chemistry
+    description: >-
+      The compound catalogue is not a first-class message; compounds are addressed by
+      numeric cid and enumerated via get_pool_of_cids. Names surface on CompoundDetail.
+  - name: OperationalStatus
+    message: picarro.sam.foup.OperationalStatus
+    domain: instrument
+    fields:
+      - {name: state, type: OperationalState}
+      - {name: flags, type: OperationalFlags}
+    relationships:
+      - {type: has_one, target: OperationalFlags, via: flags}
+  - name: OperationalFlags
+    message: picarro.sam.foup.OperationalFlags
+    domain: instrument
+    fields: [initialized, ready, active, measuring, cleaning, calibrating, calibrating_background, calibrating_ambient, validating_inline, disabled]
+  - name: AnalyzerFdcEvent
+    message: picarro.sam.foup.AnalyzerFdcEvent
+    domain: instrument
+    fields:
+      - {name: analyzer_name, type: string}
+      - {name: analyzer_model, type: string}
+      - {name: publish_reason, type: PublishReason}
+      - {name: fdc_event, type: string}
+      - {name: severity, type: picarro.status.Level}
+      - {name: timestamp, type: google.protobuf.Timestamp}
+    relationships:
+      - {type: belongs_to, target: Analyzer, via: analyzer_name}
+  - name: Analyzer
+    message: 'implicit — addressed by analyzer identity string'
+    domain: instrument
+    description: >-
+      Analyzers are keyed by an identity string (e.g. "Picarro_9038-NUV1083") used as
+      mapping_key on Controller signals and as analyzer_name on FDC events.
+    relationships:
+      - {type: has_many, target: Error, via: 'analyzer_health mapping_key'}
+  - name: Error
+    message: picarro.status.Error
+    domain: diagnostics
+    fields: [domain, origin, level, code, symbol, timestamp, attributes, text]
+    see: errors/picarro-problem-types.yml
+  - name: ServiceInfo
+    message: picarro.sam.foup.ServiceInfo
+    domain: meta
+    fields:
+      - {name: api_version, type: picarro.version.Version}
+      - {name: server_name, type: string}
+  - name: TimeBound
+    message: picarro.sam.foup.TimeBound
+    domain: query
+    fields: [start_time, end_time]
+    description: 'Bounds get_reprocessed_results_time_bound and get_species_time_bound; defaults to the past 24 hours.'
+enumerations:
+  - {name: ActionType, values: 'ACTION_NONE, ACTION_MEASURE_1 (inlet #1), ACTION_MEASURE_2, plus CLEAN_1/CLEAN_2 per JobInputs comment'}
+  - {name: JobState, values: 'JOB_INACTIVE and the RUNNING/WAITING progression documented in foup.proto'}
+  - {name: OperationalState, values: 'OP_UNINITIALIZED, OP_INITIALIZING, ...'}
+  - {name: Unit, values: 'UNIT_UNSPECIFIED, UNIT_PPB'}
+  - {name: PublishReason, values: 'PUBLISH_REASON_UNSPECIFIED, PUBLISH_REASON_NEW_ALERT'}
+  - {name: MSOpState, values: 'MS_OP_ACCEPTED, MS_OP_SUCCESS (documented in the README)'}
+  - {name: 'picarro.status.Domain', values: 'DOMAIN_NONE, DOMAIN_APPLICATION, DOMAIN_SYSTEM, DOMAIN_PROCESS, DOMAIN_DEVICE, DOMAIN_SERVICE'}
+  - {name: 'picarro.status.Level', values: 'LEVEL_NONE .. LEVEL_FATAL (9 levels)'}
+  - {name: 'picarro.signal.MappingAction', values: 'MAP_NONE, MAP_ADDITION, MAP_REMOVAL, MAP_UPDATE'}
+x-evidence:
+  fetched: '2026-08-02'
+  source_repo: https://github.com/picarro/sam-foup-public

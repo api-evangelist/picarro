@@ -1,0 +1,99 @@
+generated: '2026-08-02'
+method: searched
+source: https://github.com/picarro/sam-foup-public/tree/master/releases
+notes: >-
+  Picarro publishes no client libraries to npm, PyPI, Maven Central, NuGet, pkg.go.dev,
+  RubyGems, Packagist or crates.io (all probed, all 404). Its first-party clients ship as
+  Python wheels and Debian packages committed directly to the public
+  picarro/sam-foup-public GitHub repository, alongside the .proto interface definitions.
+  Version observed: 6.1.0-5 (Debian) / 5.0.0 (wheels).
+registries_probed:
+  - {registry: pypi, queries: [picarro, picarro-api, pcubed], result: none}
+  - {registry: npm, queries: [picarro, '@picarro/sdk', pcubed], result: none}
+  - {registry: github-releases, repo: picarro/sam-foup-public, result: found}
+packages:
+  - language: python
+    registry: github
+    name: picarro_sam_foup_edge_clients
+    version: 5.0.0
+    file: picarro_sam_foup_edge_clients-5.0.0-py3-none-any.whl
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro_sam_foup_edge_clients-5.0.0-py3-none-any.whl
+    install: pip install picarro_sam_foup_edge_clients-5.0.0-py3-none-any.whl
+    description: >-
+      gRPC client modules for the Picarro Edge services — FOUP job control, MeasurementSet
+      operations, Controller health events, and the CRDS data clients. Provides the
+      `picarro.sam.shell` interactive shell (`samshell`). Python 3.9+.
+    official: true
+  - language: python
+    registry: github
+    name: picarro_platform_clients
+    version: 5.0.0
+    file: picarro_platform_clients-5.0.0-py3-none-any.whl
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro_platform_clients-5.0.0-py3-none-any.whl
+    install: pip install picarro_platform_clients-5.0.0-py3-none-any.whl
+    description: >-
+      gRPC client modules for the Picarro Platform Server services — NetConfig, SysConfig,
+      VirtualFileSystem and Upgrade — plus the `platformshell` interactive shell.
+    official: true
+  - language: python
+    registry: github
+    name: picarro_multilogger_client
+    version: 5.0.0
+    file: picarro_multilogger_client-5.0.0-py3-none-any.whl
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro_multilogger_client-5.0.0-py3-none-any.whl
+    install: pip install picarro_multilogger_client-5.0.0-py3-none-any.whl
+    description: Client module for the Picarro multilogger service.
+    official: true
+  - language: python
+    registry: github
+    name: picarro_common
+    version: 5.0.0
+    file: picarro_common-5.0.0-py3-none-any.whl
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro_common-5.0.0-py3-none-any.whl
+    install: pip install picarro_common-5.0.0-py3-none-any.whl
+    description: Shared Picarro Python utilities and ProtoBuf wrapper types (`picarro.protobuf.*`).
+    official: true
+  - language: debian
+    registry: github
+    name: picarro-sam-foup-edge
+    version: 6.1.0-5
+    file: picarro-sam-foup-edge_6.1.0-5_amd64.deb
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro-sam-foup-edge_6.1.0-5_amd64.deb
+    install: sudo apt -y install ./releases/picarro-sam-foup-edge_6.1.0-5_amd64.deb
+    description: >-
+      The `picarro-edge` gRPC server (TCP 3343) plus the foup-api-tool,
+      measurementset-api-tool, crds-api-tool and controller-api-tool CLIs. Debian 12 /
+      Ubuntu 24.04 or newer.
+    official: true
+  - language: debian
+    registry: github
+    name: picarro-platform
+    version: 6.1.0-5
+    file: picarro-platform_6.1.0-5_amd64.deb
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro-platform_6.1.0-5_amd64.deb
+    install: sudo apt -y install ./releases/picarro-platform_6.1.0-5_amd64.deb
+    description: >-
+      The `platformserver` gRPC server (TCP 7528) plus netconfig-tool, sysconfig-tool,
+      vfs-tool and upgrade-tool.
+    official: true
+  - language: debian
+    registry: github
+    name: picarro-multilogger
+    version: 6.1.0-5
+    file: picarro-multilogger_6.1.0-5_amd64.deb
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro-multilogger_6.1.0-5_amd64.deb
+    official: true
+  - language: debian
+    registry: github
+    name: picarro-common
+    version: 6.1.0-5
+    file: picarro-common_6.1.0-5_amd64.deb
+    url: https://github.com/picarro/sam-foup-public/blob/master/releases/picarro-common_6.1.0-5_amd64.deb
+    official: true
+runtime_dependencies:
+  - {name: python3-grpcio, note: required by the Python gRPC clients}
+  - {name: python3-protobuf, note: required by the Python gRPC clients}
+x-evidence:
+  fetched: '2026-08-02'
+  url: https://api.github.com/repos/picarro/sam-foup-public/git/trees/HEAD?recursive=1
+  http_status: 200

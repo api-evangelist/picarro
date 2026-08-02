@@ -1,0 +1,64 @@
+generated: '2026-08-02'
+method: searched
+probe: true
+probe_result: >-
+  probe-security-programs.py returned trust=none — trust.picarro.com is a Vanta-hosted
+  single-page app whose certification list renders client-side, so the keyword check on the
+  raw body found nothing. The trust center is real: the served HTML identifies itself as a
+  Vanta trust report (assets.vanta.com), carries <title>Picarro Trust Center</title> and a
+  meta description written by Picarro. Certifications below are taken from Picarro's own
+  compliance page and press release, not from the trust center body.
+url: https://trust.picarro.com/
+platform: Vanta Trust Center
+certifications:
+  - id: iso-27001-2022
+    name: ISO/IEC 27001:2022
+    scope: Information Security Management Systems (ISMS)
+    auditor: A-LIGN
+    announced: '2025-11-13'
+  - id: iso-27017
+    name: ISO/IEC 27017
+    scope: Cloud security
+    auditor: A-LIGN
+    announced: '2025-11-13'
+  - id: iso-27018
+    name: ISO/IEC 27018
+    scope: Protection of personally identifiable information in public clouds
+    auditor: A-LIGN
+    announced: '2025-11-13'
+  - id: soc-2-type-2
+    name: SOC 2 Type 2
+    scope: 'Trust Services Criteria — security, availability, processing integrity, confidentiality, privacy'
+    auditor: A-LIGN
+    announced: '2025-11-13'
+  - id: iso-9001-2015
+    name: ISO 9001:2015
+    scope: Quality management system
+    page: https://www.picarro.com/picarros_iso_90012015_certification
+document_access: >-
+  Sensitive documents in the trust center are gated — "click the lock icon next to the
+  document and provide the requested information" (Picarro's own trust center description).
+compliance_page: https://www.picarro.com/ensuring_data_security_and_compliance
+privacy:
+  - {name: Privacy Policy (EU & US), url: 'https://www.picarro.com/privacy_policy'}
+  - {name: Privacy Policy (California Residents), url: 'https://www.picarro.com/environmental/picarro_privacy_policy_california_residents'}
+  - {name: Terms of Service, url: 'https://www.picarro.com/terms_of_service'}
+vulnerability_disclosure:
+  found: false
+  probed:
+    - {url: 'https://www.picarro.com/.well-known/security.txt', status: 404}
+    - {url: 'https://www.picarro.com/security', status: 404}
+    - {url: 'https://www.picarro.com/responsible-disclosure', status: 404}
+    - {url: 'https://www.picarro.com/vulnerability-disclosure', status: 404}
+    - {url: 'https://www.picarro.com/security/responsible-disclosure', status: 404}
+  note: >-
+    No RFC 9116 security.txt, no published responsible-disclosure policy, no bug bounty on
+    HackerOne / Bugcrowd / Intigriti, and no security@ address found. No `Security` or
+    `VulnerabilityDisclosure` pointer is emitted — there is nothing to point at. This is a
+    real, reportable gap for a company that just completed SOC 2 Type 2 and ISO 27001.
+evidence:
+  - {source: 'https://trust.picarro.com/', kind: trust-center, http_status: 200, detail: 'Vanta trust report SPA; title and meta description authored by Picarro'}
+  - {source: 'https://www.picarro.com/ensuring_data_security_and_compliance', kind: compliance-page, detail: 'names ISO/IEC 27001:2022, ISO 27017, ISO 27018, SOC 2 Type 2'}
+  - {source: 'https://www.picarro.com/gas/company/press-releases/2025/picarro_achieves_isoiec_270012022_27017_and_27018_certifications', kind: press-release, detail: 'A-LIGN as auditor; November 2025'}
+x-evidence:
+  fetched: '2026-08-02'

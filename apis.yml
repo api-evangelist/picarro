@@ -1,23 +1,307 @@
 aid: picarro
 name: Picarro
-description: 'Picarro is a company surfaced via the API Evangelist harvest backlog (source: secondary-market)
-  and added to the network as a stub for full-pipeline profiling.'
+description: >-
+  Picarro, Inc. is a Santa Clara, California company that builds high-precision gas
+  concentration and stable-isotope analyzers based on Cavity Ring-Down Spectroscopy
+  (CRDS), together with the cloud software and mobile platforms that turn those
+  measurements into operational decisions. Its instruments measure more than 700
+  compounds — methane, ethane, CO2, N2O, ammonia, ethylene oxide, hydrogen peroxide,
+  water isotopes and cleanroom-level airborne molecular contamination — at parts-per-
+  billion and parts-per-trillion sensitivity. Picarro serves natural gas utilities
+  (mobile methane leak detection and the Picarro Surveyor programme), sterilization and
+  EtO facilities, refinery and chemical-plant fenceline monitoring, semiconductor
+  cleanrooms and FOUP contamination control, pharmaceutical manufacturing, and
+  atmospheric and earth-science research. The company reports 25+ years of operation,
+  5,000+ instruments installed in about 100 countries, and 77 patents. Its software side
+  is P-Cubed, a cloud data-processing and storage platform with a customer-facing API for
+  custom data transformation routines, a companion mobile app for field leak
+  investigations, and — for semiconductor deployments — a publicly published gRPC/ProtoBuf
+  interface (picarro/sam-foup-public) for external control and monitoring of Picarro Edge
+  systems.
+image: https://www.picarro.com/sites/default/files/picarro_logo.png
 url: https://raw.githubusercontent.com/api-evangelist/picarro/refs/heads/main/apis.yml
 x-type: company
 x-source: harvest:secondary-market
-x-tier: stub
-x-tier-reason: harvest
+x-enrichment:
+  date: '2026-08-02'
+  status: enriched
+  artifacts_added: 34
+  pass: local-v1
 specificationVersion: '0.20'
 created: '2026-08-02'
 modified: '2026-08-02'
 tags:
 - Company
-apis: []
+- Gas Detection
+- Environmental Monitoring
+- Emissions
+- Methane
+- Greenhouse Gas
+- Scientific Instruments
+- Semiconductor
+- Industrial IoT
+- Sensors
+- Analytics
+- gRPC
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
+apis:
+- name: Picarro Edge — SAM FOUP gRPC API
+  description: >-
+    The first-party gRPC/ProtoBuf interface Picarro publishes for external access to
+    Picarro SAM (semiconductor airborne molecular contamination) systems. The
+    `picarro-edge` server exposes three services — FOUP for starting, aborting and
+    retrieving FOUP measurement jobs, MeasurementSet for managing which compounds are
+    measured, and Controller for streaming instrument health alerts. Every service also
+    exposes a server-streaming `watch()` signal feed that acts as a pub/sub event channel.
+    Interface definitions, Python client wheels, Debian packages and command-line tools
+    are published openly on GitHub.
+  humanURL: https://github.com/picarro/sam-foup-public
+  baseURL: grpc://localhost:3343
+  x-deployment: on-premise-edge
+  x-deployment-note: >-
+    picarro-edge runs on the customer's own instrument network and accepts plaintext gRPC
+    on TCP 3343 (E-D-G-E). There is no Picarro-hosted endpoint; clients pass
+    --host=ADDRESS to reach a specific instrument. The base URL above is the documented
+    default, not a public service.
+  tags: [gRPC, Protobuf, Semiconductor, Gas Detection, Events]
+  properties:
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-foup.proto
+    name: FOUP service
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-measurementset.proto
+    name: MeasurementSet service
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-controller.proto
+    name: Controller service
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-signal.proto
+    name: Signal / filter types
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-status.proto
+    name: Status and error types
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-version.proto
+    name: Version types
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-variant.proto
+    name: Variant types
+  - type: AsyncAPI
+    url: asyncapi/picarro-sam-foup-asyncapi.yml
+    name: SAM FOUP signal streams (derived)
+  - type: SourceCode
+    url: https://github.com/picarro/sam-foup-public
+  - type: Documentation
+    url: https://github.com/picarro/sam-foup-public/blob/master/README.md
+- name: Picarro Platform Server API
+  description: >-
+    The gRPC interface to the host computer underneath a Picarro SAM deployment.
+    `platformserver` exposes NetConfig for network connectivity and Wi-Fi management,
+    SysConfig for product/version information, host name, time and timezone configuration
+    and command invocation, VirtualFileSystem for downloading logs and uploading upgrade
+    packages, and Upgrade for scanning for and installing Picarro .picpac release
+    packages. Interface definitions and Python clients are published on GitHub.
+  humanURL: https://github.com/picarro/sam-foup-public
+  baseURL: grpc://localhost:7528
+  x-deployment: on-premise-edge
+  x-deployment-note: >-
+    platformserver accepts plaintext gRPC on TCP 7528 (P-L-A-T) on the customer's own
+    host. There is no Picarro-hosted endpoint.
+  tags: [gRPC, Protobuf, System Management, Device Management]
+  properties:
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-netconfig.proto
+    name: NetConfig service
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-sysconfig.proto
+    name: SysConfig service
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-vfs.proto
+    name: VirtualFileSystem service
+  - type: Protobuf
+    url: grpc/picarro-sam-foup-upgrade.proto
+    name: Upgrade service
+  - type: SourceCode
+    url: https://github.com/picarro/sam-foup-public
+  - type: Documentation
+    url: https://github.com/picarro/sam-foup-public/blob/master/README.md
+- name: Picarro Identity (P-Cubed SSO)
+  description: >-
+    The Keycloak-backed identity service that fronts the Picarro P-Cubed cloud platform.
+    It publishes an anonymous OpenID Connect discovery document for the `picarro` realm,
+    advertising the authorization, token, userinfo, introspection, revocation, logout and
+    JWKS endpoints, dynamic client registration, PKCE (S256), mTLS-bound access tokens and
+    five OAuth 2.0 grant types. The P-Cubed web application itself authenticates browsers
+    against the same realm over SAML 2.0.
+  humanURL: https://pcubed.picarro.com/
+  baseURL: https://identity-prod.picarro.com/auth/realms/picarro
+  tags: [Authentication, OpenID Connect, OAuth, SSO, Identity]
+  properties:
+  - type: OpenIDConnect
+    url: well-known/picarro-openid-configuration.json
+    name: OpenID Connect discovery document
+  - type: Authentication
+    url: authentication/picarro-authentication.yml
+  - type: OAuthScopes
+    url: scopes/picarro-scopes.yml
+- name: Picarro P-Cubed Platform
+  description: >-
+    P-Cubed is Picarro's cloud data processing and storage platform. Picarro analyzers
+    stream or batch data to it, customers interact with the results in a graphics-rich web
+    environment, and — per Picarro's own product literature — customers can create their
+    own customized data transformation routines through the P-Cubed application
+    programming interface, alongside proprietary Picarro algorithms. The P-Cubed Mobile
+    App (launched October 2025) pairs with the Picarro Handheld and transmits readings to
+    the P-Cubed Cloud. No public specification, developer portal, or API reference for the
+    P-Cubed API was found; access is gated behind customer SSO.
+  humanURL: https://www.picarro.com/gas/P-Cubed_Mobile
+  baseURL: https://pcubed.picarro.com
+  x-contract-status: no-public-specification
+  x-contract-note: >-
+    Probed 2026-08-02 — /openapi.json, /openapi.yaml, /swagger.json, /api/openapi.json,
+    /api/swagger.json, /swagger-ui.html, /api/v1 and /.well-known/* all returned 404 or an
+    unauthenticated redirect to the Keycloak SAML endpoint. The API is documented only in
+    Picarro sales literature.
+  tags: [Analytics, Cloud, Data Processing, Methane, Utilities]
+  properties:
+  - type: SignUp
+    url: https://www.picarro.com/user/register
+  - type: Login
+    url: https://pcubed.picarro.com/
+  - type: MobileApp
+    url: https://play.google.com/store/apps/details?id=com.picarro.pcubedmobile
+    name: P-Cubed Mobile (Google Play)
+  - type: StatusPage
+    url: https://status.picarro.com/status/gas
 common:
+- type: DomainSecurity
+  url: security/picarro-domain-security.yml
 - type: Website
-  url: https://forgeglobal.com/picarro_stock/
+  url: https://www.picarro.com/
+- type: Documentation
+  url: https://github.com/picarro/sam-foup-public/blob/master/README.md
+- type: APIReference
+  url: https://github.com/picarro/sam-foup-public/tree/master/proto
+- type: GettingStarted
+  url: https://github.com/picarro/sam-foup-public/blob/master/README.md#getting-started
+- type: GitHubOrganization
+  url: https://github.com/picarro
+- type: Support
+  url: https://www.picarro.com/support
+- type: HelpCenter
+  url: https://www.picarro.com/support/caseform
+- type: Community
+  url: https://www.picarro.com/support/community
+- type: Blog
+  url: https://www.picarro.com/company/press_releases
+- type: SignUp
+  url: https://www.picarro.com/user/register
+- type: Login
+  url: https://www.picarro.com/user/login
+- type: Pricing
+  url: https://store.picarro.com/
+- type: TermsOfService
+  url: https://www.picarro.com/terms_of_service
+- type: PrivacyPolicy
+  url: https://www.picarro.com/privacy_policy
+- type: Compliance
+  url: https://www.picarro.com/ensuring_data_security_and_compliance
+- type: TrustCenter
+  url: https://trust.picarro.com/
+- type: StatusPage
+  url: https://status.picarro.com/status/gas
+- type: Contact
+  url: https://www.picarro.com/company/contact_us
+- type: Resources
+  url: https://www.picarro.com/resources/library
+- type: SoftwareDownloads
+  url: https://www.picarro.com/software_downloads
+- type: Careers
+  url: https://www.picarro.com/careers
+- type: Partners
+  url: https://www.picarro.com/partners
+- type: Packages
+  url: packages/picarro-packages.yml
+- type: SDKs
+  url: packages/picarro-packages.yml
+- type: CLI
+  url: cli/picarro-cli.yml
+- type: Sandbox
+  url: sandbox/picarro-sandbox.yml
+- type: WellKnown
+  url: well-known/picarro-well-known.yml
+- type: Authentication
+  url: authentication/picarro-authentication.yml
+- type: OAuthScopes
+  url: scopes/picarro-scopes.yml
+- type: Conventions
+  url: conventions/picarro-conventions.yml
+- type: ErrorCatalog
+  url: errors/picarro-problem-types.yml
+- type: AsyncAPI
+  url: asyncapi/picarro-sam-foup-asyncapi.yml
+- type: Conformance
+  url: conformance/picarro-conformance.yml
+- type: Lifecycle
+  url: lifecycle/picarro-lifecycle.yml
+- type: ChangeLog
+  url: changelog/picarro-changelog.yml
+- type: DataModel
+  url: data-model/picarro-data-model.yml
+- type: ToolCrosswalk
+  url: mcp/picarro-tool-crosswalk.yml
+- type: TrustCenter
+  url: security/picarro-trust-center.yml
+- type: LLMsTxt
+  url: llms/picarro-llms.txt
+- type: AgentSkill
+  url: skills/_index.yml
+- type: AgentSkill
+  url: skills/picarro-run-foup-measurement.md
+  name: Run a Picarro FOUP measurement and collect results
+- type: AgentSkill
+  url: skills/picarro-manage-measurement-sets.md
+  name: Manage Picarro measurement sets
+- type: AgentSkill
+  url: skills/picarro-monitor-analyzer-health.md
+  name: Monitor Picarro analyzer health and FDC alerts
+x-enrichment-notes:
+  pointers_deliberately_withheld:
+  - type: Idempotency
+    reason: >-
+      Picarro documents no idempotency key or de-duplication contract anywhere in the
+      .proto files or the README. start_job is explicitly not safe to retry. Recorded as
+      supported:false in conventions/picarro-conventions.yml.
+  - type: Security
+    reason: >-
+      No RFC 9116 security.txt, no responsible-disclosure policy, no bug bounty on
+      HackerOne/Bugcrowd/Intigriti and no security@ address were found on any Picarro host
+      (all probed 2026-08-02, all 404). No vulnerability-disclosure artifact was written.
+  - type: Deprecation
+    reason: >-
+      No written deprecation or sunset policy is published. The only deprecation signal is
+      the field-level "// Deprecated" annotation on APILEVEL_TWEAK in foup.proto.
+  - type: MCPServer
+    reason: >-
+      Picarro hosts no MCP server. mcp/picarro-mcp.yml is an API Evangelist design
+      candidate derived from the published gRPC contract, marked status:candidate; wiring
+      the canonical pointer would credit Picarro with an agent surface it does not operate.
+  - type: AgentCard
+    reason: >-
+      /.well-known/agent-card.json and /.well-known/agent.json were probed on every
+      Picarro host. www and pcubed returned 404; trust, status and fenceline returned
+      HTML SPA catch-alls, which were rejected. No a2a/ artifact was written.
+  - type: Webhooks
+    reason: >-
+      Picarro ships no webhooks. Its event surface is gRPC server streaming (watch()
+      signal feeds), described in the derived AsyncAPI document.
+  - type: Postman
+    reason: >-
+      Public Postman search returns only an unaffiliated empty personal team
+      ("ywu-picarro's Team", 0 collections). No official Picarro collection or workspace.
+  - type: Roadmap
+    reason: No public roadmap page was found.

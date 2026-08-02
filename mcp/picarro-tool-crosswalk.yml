@@ -1,0 +1,79 @@
+generated: '2026-08-02'
+method: derived
+source:
+  - mcp/picarro-mcp.yml
+  - grpc/
+status: candidate
+notes: >-
+  The standard crosswalk binds MCP tools to backing OpenAPI operationIds. Picarro publishes
+  no OpenAPI and no GraphQL, so the machine-readable core here is ProtoBuf: each candidate
+  tool binds to a fully-qualified gRPC method, and that method's request message is the
+  tool's real input schema. Because both sides of this crosswalk are derived from the same
+  .proto files, every binding is confidence: high — there is no name-matching guesswork.
+surfaces:
+  openapi:
+    present: false
+    note: 'Probed /openapi.json, /openapi.yaml, /swagger.json, /v1/openapi.json, /api-docs, /docs, /redoc on www.picarro.com, pcubed.picarro.com and identity-prod.picarro.com — all 404 or HTML.'
+  graphql:
+    present: false
+    note: No /graphql surface found on any Picarro host.
+  grpc:
+    present: true
+    servers:
+      - {name: picarro-edge, port: 3343, services: ['picarro.sam.foup.FOUP', 'picarro.sam.ms.MeasurementSet', 'picarro.sam.controller.Controller']}
+      - {name: platformserver, port: 7528, services: ['picarro.platform.netconfig.NetConfig', 'picarro.platform.sysconfig.SysConfig', 'picarro.platform.vfs.VirtualFileSystem', 'picarro.platform.upgrade.Upgrade']}
+    reflection: true
+    gated: false
+    note: 'Plaintext gRPC with reflection enabled; the contract is fully public in grpc/.'
+  mcp:
+    present: false
+    gated: n/a
+    note: 'No MCP server is hosted by Picarro. Tools below are API Evangelist candidates.'
+  rest:
+    present: partial
+    note: >-
+      The samshell legend names a `crds_rest` subsystem — "CRDS Data REST client
+      (communicates with SAM Core)" — so a REST surface exists internally between Edge and
+      SAM Core, but Picarro publishes no specification, base URL, or reference for it.
+crosswalk:
+  - {tool: get_service_info, category: meta, grpc: ['picarro.sam.foup.FOUP/get_service_info'], input_message: google.protobuf.Empty, output_message: picarro.sam.foup.ServiceInfo, binding: grpc, confidence: high}
+  - {tool: start_job, category: measurement, grpc: ['picarro.sam.foup.FOUP/start_job'], input_message: picarro.sam.foup.JobInputs, output_message: picarro.sam.foup.JobIdentity, binding: grpc, confidence: high, note: 'Input schema = JobInputs {action, foup_id, duration, measurement_set_name}.'}
+  - {tool: abort_job, category: measurement, grpc: ['picarro.sam.foup.FOUP/abort_job'], input_message: picarro.sam.foup.JobIdentity, output_message: picarro.sam.foup.AbortResult, binding: grpc, confidence: high}
+  - {tool: get_job_result, category: measurement, grpc: ['picarro.sam.foup.FOUP/get_result'], input_message: picarro.sam.foup.JobIdentity, output_message: picarro.sam.foup.JobResult, binding: grpc, confidence: high}
+  - {tool: get_reprocessed_results_by_ids, category: measurement, grpc: ['picarro.sam.foup.FOUP/get_reprocessed_results_by_ids'], input_message: picarro.sam.foup.JobIdentityList, output_message: picarro.sam.foup.ReprocessedResultList, binding: grpc, confidence: high}
+  - {tool: get_reprocessed_results_time_bound, category: measurement, grpc: ['picarro.sam.foup.FOUP/get_reprocessed_results_time_bound'], input_message: picarro.sam.foup.TimeBoundRequest, output_message: picarro.sam.foup.ReprocessedResultList, binding: grpc, confidence: high}
+  - {tool: get_species_time_bound, category: measurement, grpc: ['picarro.sam.foup.FOUP/get_species_time_bound'], input_message: picarro.sam.foup.TimeBoundRequest, output_message: picarro.sam.foup.SpeciesList, binding: grpc, confidence: high}
+  - {tool: watch_foup_signals, category: events, grpc: ['picarro.sam.foup.FOUP/watch'], input_message: picarro.signal.Filter, output_message: 'stream picarro.sam.foup.Signal', binding: grpc-server-stream, confidence: high, note: 'Server streaming has no direct MCP tool analogue; needs a notification bridge or a polling adapter.'}
+  - {tool: get_pool_of_cids, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/get_pool_of_cids'], input_message: google.protobuf.Empty, binding: grpc, confidence: high}
+  - {tool: get_all_measurement_sets, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/get_all_measurement_sets'], input_message: google.protobuf.Empty, output_message: picarro.sam.ms.MeasurementSetList, binding: grpc, confidence: high}
+  - {tool: get_active_measurement_sets, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/get_active_measurement_sets'], input_message: google.protobuf.Empty, output_message: picarro.sam.ms.MeasurementSetList, binding: grpc, confidence: high}
+  - {tool: get_suggested_measurement_sets, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/get_suggested_measurement_sets'], input_message: google.protobuf.Empty, binding: grpc, confidence: high}
+  - {tool: add_measurement_set, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/add_measurement_set'], input_message: picarro.sam.ms.MeasurementSetDetail, binding: grpc, confidence: high}
+  - {tool: edit_measurement_set, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/edit_measurement_set'], input_message: picarro.sam.ms.EditMeasurementSetRequest, binding: grpc, confidence: high, note: 'The CLI splits this into edit_measurement_set_by_name / _by_number; the gRPC method is one, keyed by a oneof identifier.'}
+  - {tool: activate_measurement_sets, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/activate_measurement_sets'], input_message: picarro.sam.ms.MeasurementSetNamesList, binding: grpc, confidence: high}
+  - {tool: deactivate_measurement_sets, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/deactivate_measurement_sets'], input_message: picarro.sam.ms.MeasurementSetNamesList, binding: grpc, confidence: high}
+  - {tool: sync_measurement_sets, category: configuration, grpc: ['picarro.sam.ms.MeasurementSet/sync_measurement_sets'], input_message: google.protobuf.Empty, binding: grpc, confidence: high}
+  - {tool: watch_measurement_set_signals, category: events, grpc: ['picarro.sam.ms.MeasurementSet/watch'], input_message: picarro.signal.Filter, output_message: 'stream picarro.sam.ms.Signal', binding: grpc-server-stream, confidence: high}
+  - {tool: watch_controller_signals, category: events, grpc: ['picarro.sam.controller.Controller/watch'], input_message: picarro.signal.Filter, output_message: 'stream picarro.sam.controller.Signal', binding: grpc-server-stream, confidence: high}
+  - {tool: get_product_info, category: platform, grpc: ['picarro.platform.sysconfig.SysConfig/get_product_info'], input_message: google.protobuf.Empty, output_message: ProductInfo, binding: grpc, confidence: high}
+  - {tool: get_host_info, category: platform, grpc: ['picarro.platform.sysconfig.SysConfig/get_host_info'], input_message: google.protobuf.Empty, output_message: HostInfo, binding: grpc, confidence: high}
+  - {tool: get_network_connections, category: platform, grpc: ['picarro.platform.netconfig.NetConfig/get_connections'], input_message: google.protobuf.Empty, output_message: ConnectionMap, binding: grpc, confidence: high}
+  - {tool: list_available_upgrades, category: platform, grpc: ['picarro.platform.upgrade.Upgrade/list_available'], input_message: PackageSource, binding: grpc, confidence: high}
+mcp_only: []
+grpc_only:
+  - {rpcs: ['picarro.platform.sysconfig.SysConfig/reboot', 'picarro.platform.sysconfig.SysConfig/invoke_sync', 'picarro.platform.sysconfig.SysConfig/invoke_async', 'picarro.platform.sysconfig.SysConfig/invoke_finish'], reason: 'Host control and arbitrary command invocation — deliberately excluded from any agent tool surface.'}
+  - {rpcs: ['picarro.platform.upgrade.Upgrade/scan', 'picarro.platform.upgrade.Upgrade/list_sources', 'picarro.platform.upgrade.Upgrade/best_available', 'picarro.platform.upgrade.Upgrade/install', 'picarro.platform.upgrade.Upgrade/finalize', 'picarro.platform.upgrade.Upgrade/watch'], reason: 'Firmware/software upgrade lifecycle on live instrument hardware.'}
+  - {rpcs: ['picarro.platform.netconfig.NetConfig/set_hostname', 'picarro.platform.netconfig.NetConfig/define_connection', 'picarro.platform.netconfig.NetConfig/remove_connection', 'picarro.platform.netconfig.NetConfig/activate_connection', 'picarro.platform.netconfig.NetConfig/deactivate_connection', 'picarro.platform.netconfig.NetConfig/connect_ap', 'picarro.platform.netconfig.NetConfig/request_scan', 'picarro.platform.netconfig.NetConfig/get_aps', 'picarro.platform.netconfig.NetConfig/get_devices', 'picarro.platform.netconfig.NetConfig/get_global_data', 'picarro.platform.netconfig.NetConfig/set_wireless_enabled', 'picarro.platform.netconfig.NetConfig/set_wireless_allowed', 'picarro.platform.netconfig.NetConfig/select_wireless_band', 'picarro.platform.netconfig.NetConfig/watch'], reason: 'Network administration of the instrument host.'}
+  - {rpcs: ['picarro.platform.sysconfig.SysConfig/set_serial_number', 'picarro.platform.sysconfig.SysConfig/set_model_name', 'picarro.platform.sysconfig.SysConfig/set_host_name', 'picarro.platform.sysconfig.SysConfig/set_current_time', 'picarro.platform.sysconfig.SysConfig/get_current_time', 'picarro.platform.sysconfig.SysConfig/set_time_config', 'picarro.platform.sysconfig.SysConfig/get_time_config', 'picarro.platform.sysconfig.SysConfig/list_timezone_areas', 'picarro.platform.sysconfig.SysConfig/list_timezone_countries', 'picarro.platform.sysconfig.SysConfig/list_timezone_regions', 'picarro.platform.sysconfig.SysConfig/list_timezone_specs', 'picarro.platform.sysconfig.SysConfig/get_timezone_spec', 'picarro.platform.sysconfig.SysConfig/get_timezone_info', 'picarro.platform.sysconfig.SysConfig/set_timezone', 'picarro.platform.sysconfig.SysConfig/watch'], reason: 'System identity and time/timezone administration — low agent value, high blast radius.'}
+  - {rpcs: ['picarro.platform.vfs.VirtualFileSystem/*'], reason: 'Filesystem access (log download, upgrade-package upload). Not enumerated here — see grpc/picarro-sam-foup-vfs.proto in the upstream repo (not mirrored).'}
+coverage:
+  tools_named: 24
+  tools_bound: 24
+  mcp_only: 0
+  grpc_methods_total: 59
+  grpc_methods_with_a_tool: 24
+  grpc_methods_deliberately_excluded: 35
+  binding_confidence: 'high (24/24) — both sides derive from the same .proto files'
+x-evidence:
+  fetched: '2026-08-02'
+  source_repo: https://github.com/picarro/sam-foup-public

@@ -1,0 +1,192 @@
+// -*- protocol-buffers -*-
+//==============================================================================
+/// @file measurementset.proto
+/// @brief `MeasurementSet` gRPC service
+/// @author Junjie Fang <jfang@picarro.com>
+//==============================================================================
+
+syntax = "proto3";
+package picarro.sam.ms;
+
+import "google/protobuf/empty.proto";
+import "signal.proto";          // Signal filter for the `watch()` method
+
+// Measurement Set gRPC service
+service MeasurementSet
+{
+    // Get the pool of available cids to be added to the measurement set
+    rpc get_pool_of_cids(google.protobuf.Empty)
+        returns (CIDList);
+
+    // Get all measurement sets, including the standard measurement set
+    rpc get_all_measurement_sets(google.protobuf.Empty)
+        returns (MeasurementSetList);
+
+    // Get active measurement sets
+    rpc get_active_measurement_sets(google.protobuf.Empty)
+        returns (MeasurementSetList);
+
+    // Add a new measurement set with a measurement_set_name and a list
+    // of target_cids
+    rpc add_measurement_set(MeasurementSetDetail)
+        returns (MSOpResponse);
+
+    // Edit an existing measurement set using its measurement_set_name
+    // as identifier. If no list of target_cids is supplied, only name
+    // change will occur
+    rpc edit_measurement_set(EditMeasurementSetRequest)
+        returns (MSOpResponse);
+
+    // Activate all measurement sets found in the list of provided names
+    rpc activate_measurement_sets(MeasurementSetNamesList)
+        returns (MSOpResponse);
+
+    // Deactivate all measurement sets found in the list of provided names
+    rpc deactivate_measurement_sets(MeasurementSetNamesList)
+        returns (MSOpResponse);
+
+    // Get the list and confidence intervals of new species found
+    rpc get_suggested_measurement_sets(google.protobuf.Empty)
+        returns (MeasurementSetList);
+
+    // Synchronize measurement sets between SAM and the VOC analyzer.
+    //
+    // **CAUTION:** This method should ONLY be invoked when there is a reported
+    // measurement set mismatch between SAM and the VOC analyzer. Using this method
+    // when no issues are present may lead to unintended consequences, such as
+    // overwriting valid data. Avoid unnecessary synchronization to ensure system
+    // stability.
+    //
+    // Invoke this method with care.
+    rpc sync_measurement_sets(google.protobuf.Empty)
+        returns (MSOpResponse);
+
+    // Listen for event updates from the server.
+    //
+    // The input is a filter mask indicating which event types to monitor,
+    // indicated by their respective field numbers in the `Signal` message,
+    // below. By default, _all_ events are streamed back.
+    //
+    // The output is a stream of `Signal` messages, each containing exactly
+    // one event as described below.
+    rpc watch (picarro.signal.Filter)
+            returns (stream Signal);
+}
+
+// List of PubChem cids
+message CIDList
+{
+    repeated uint64 cids = 1;
+}
+
+// PubChem compound id with a suggestion confidence level for the compound
+message CIDConfidence
+{
+    uint64 cid = 1;
+    double confidence = 2;
+}
+
+// List of cids with confidence levels
+message CIDConfidenceList
+{
+    repeated CIDConfidence cid_confidences = 1;
+}
+
+// The detailed information of a measurement set
+message MeasurementSetDetail
+{
+    string measurement_set_name = 1;
+    oneof cid_list
+    {
+        // The list of target cids for the measurement set
+        CIDList target_cids = 2;
+
+        // The list of suggested cids with confidence level, only for suggested measurement set
+        CIDConfidenceList suggested_cids = 3;
+    }
+
+    // The slot number of measurement set, null before adding
+    optional uint64 measurement_set_number = 4;
+
+    // Whether the current measurement set is active, null before adding
+    optional bool active = 7;
+
+    // Whether the current measurement set is editable, null before adding
+    optional bool editable = 8;
+}
+
+// Edit a measurement set with a new name and/or a new list of cids
+message EditMeasurementSetRequest
+{
+    oneof identifier
+    {
+        // Original measurement_set_name
+        string measurement_set_name = 1;
+        uint64 measurement_set_number = 2;
+    }
+
+    // New measurement name to change to
+    optional string new_measurement_set_name = 4;
+
+    // Optionally, change to a new list of cids
+    optional CIDList target_cids = 7;
+}
+
+// List of all measurement sets
+message MeasurementSetList
+{
+    repeated MeasurementSetDetail measurement_sets = 1;
+}
+
+// List of names for measurement sets to be activated/deactivated
+message MeasurementSetNamesList
+{
+    repeated string measurement_set_names = 1;
+}
+
+enum MSOpState
+{
+    MS_OP_UNSPECIFIED = 0;     // Default/unknown state
+    MS_OP_ACCEPTED = 1;        // Request has been received and accepted
+    MS_OP_SUCCESS = 4;         // Operation completed successfully
+    MS_OP_FAILURE = 5;         // Operation failed
+}
+
+// MSOpResponse from measurement set operations. For batch operations such as
+// activate/deactivate, only `ms_op_state` and `message` will be returned
+message MSOpResponse
+{
+    // Initial state (ACCEPTED or REJECTED)
+    MSOpState ms_op_state = 1;
+
+    // General message, e.g., "Request accepted"
+    string message = 2;
+
+    // Measurement Set information where applicable
+    optional MeasurementSetDetail measurement_set = 3;
+}
+
+//==============================================================================
+// A `Signal` message is a multiplexer for various event types from the server,
+// streamed back to the client in response to a `watch()` invocation, above.
+// The event stream continues indefinitely until the client cancels the call or
+// disconnects.
+//
+// To listen for only specific event types, apply a corresponding signal filter
+// as input parameter to the `watch()` call. The filter should contain a list of
+// field indices to include or exclude, based on their field numbers within the
+// `oneof` block below. The filter also contains a `polarity` field to indicate
+// whether the listed fields are to be included (1) or excluded (0).  As such,
+// an empty filter means that all events will be streamed back to the client.
+
+message Signal
+{
+    oneof signal
+    {
+        // Measurement set operation signals. Emitted on ms operation status change
+        MSOpResponse ms_op_response = 7;
+
+        // Suggested measurement sets
+        MeasurementSetList suggested_ms = 13;
+    }
+}

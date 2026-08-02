@@ -1,0 +1,380 @@
+// -*- protocol-buffers -*-
+//==============================================================================
+/// @file foup.proto
+/// @brief `FOUP` gRPC service
+/// @author Tor Slettnes <tslettnes@picarro.com>
+/// @author Junjie Fang <jfang@picarro.com>
+//==============================================================================
+
+syntax = "proto3";
+package picarro.sam.foup;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "status.proto";          // Event
+import "signal.proto";          // Signal filter for the `watch()` method
+import "version.proto";         // Common version structure
+
+service FOUP
+{
+    // Get some basic service information from the server, notably
+    // its "name" (nominally the executable name) and its API version
+    // (derived from the APILEVEL_* enumerated values below).
+    rpc get_service_info (google.protobuf.Empty)
+        returns (ServiceInfo);
+
+    // Start a new measurement.
+    rpc start_job (JobInputs)
+        returns (JobIdentity);
+
+    // Cancel the current measurement. If a job identity is provided, cancel
+    // only if it matches that of the current job.
+    rpc abort_job (JobIdentity)
+        returns (AbortResult);
+
+    // Get results from the specified job, or the latest job if no
+    // job identity is provided.
+    rpc get_result (JobIdentity)
+        returns (JobResult);
+
+    // Get reprocessed results for jobs based on provided job identities.
+    rpc get_reprocessed_results_by_ids (JobIdentityList)
+        returns (ReprocessedResultList);
+
+    // Get a list of reprocessed results based on time range provided or by default past 24 hours.
+    rpc get_reprocessed_results_time_bound(TimeBoundRequest)
+            returns (ReprocessedResultList);
+
+    // Get a list of species measured based on time range provided or by default past 24 hours.
+    rpc get_species_time_bound(TimeBoundRequest)
+        returns (SpeciesList);
+
+    // Listen for event updates from the server.
+    //
+    // The input is a filter mask indicating which event types to monitor,
+    // indicated by their respective field numbers in the `Signal` message,
+    // below. By default, _all_ events are streamed back.
+    //
+    // The output is a stream of `Signal` messages, each containing exactly
+    // one event as described below.
+    rpc watch (picarro.signal.Filter)
+        returns (stream Signal);
+}
+
+message ServiceInfo
+{
+    // Server's API level. Use this to check compatibility.
+    picarro.version.Version api_version = 1;
+
+    // Name of server executable
+    string server_name = 2;
+}
+
+enum APILevel
+{
+    // The values below are used by peers to construct their API version,
+    // i.e. indicate against which version of this file they were built.
+    // Clients can request the server's version using `get_service_info()` above.
+
+    option allow_alias = true;
+    APILEVEL_UNINITIALIZED = 0;
+    APILEVEL_MAJOR = 1; // Increment this if breaking changes are introduced
+    APILEVEL_MINOR = 0; // Increment this for backwards compatible interface changes
+    APILEVEL_PATCH = 0; // Increment this when a change is backwards and forwards compatible
+
+    // Deprecated
+    APILEVEL_TWEAK = 0;
+}
+
+
+// Input parameters needed to start a job
+message JobInputs
+{
+    ActionType action = 1;                 // MEASURE_1, MEASURE_2, CLEAN_1 or CLEAN_2
+    string foup_id = 2;                    // Unique identifier for this FOUP
+    google.protobuf.Duration duration = 3; // Measurement duration
+    string measurement_set_name = 5;       // The measurement set used for this job
+    optional bool extended_measurement = 7;// Extended measurement for VOC
+}
+
+enum ActionType
+{
+    ACTION_NONE               = 0; // No action is specified
+    ACTION_MEASURE_1          = 1; // Measuring from inlet #1
+    ACTION_MEASURE_2          = 2; // Measuring from inlet #2
+    ACTION_BG_CORRECT         = 3; // Background correction
+    ACTION_AMBIENT            = 4; // Ambient air measurement
+    ACTION_INLINE_1           = 5; // Inline validation: IPA
+    ACTION_INLINE_2           = 6; // Inline validation: CH4 (proxy for HCl)
+    ACTION_INLINE_3           = 7; // Inline validation: O2 (proxy for HF)
+    ACTION_INLINE_4           = 8; // Inline validation: CO2 (proxy for NH3)
+    ACTION_CLEAN_1            = 9; // Run reference gas through inlet #1 to clean inlet #1
+    ACTION_CLEAN_2            = 10;// Run reference gas through inlet #2 to clean inlet #2
+
+}
+
+// Unique job identifier, generated when starting a job.
+message JobIdentity
+{
+    // Unique job identifier.
+    // If not provided in requests, the current/most recent job  is used.
+    optional uint64 id = 1;
+}
+
+// List of job identifiers to look for reprocessed result
+message JobIdentityList
+{
+    repeated uint64 job_id = 1;
+}
+
+// Real-time job status
+message JobStatus
+{
+    // Inputs (invariant)
+    uint64 job_id = 1;                                // Unique job identifier
+    string foup_id = 2;                               // Associated FOUP ID
+    bool automatic = 3;                               // Automatic maintenance task
+    ActionType action = 4;                            // Action type
+    google.protobuf.Duration scheduled_duration = 5;  // Scheduled run time
+    optional bool extended_measurement = 6;           // Extended VOC measurement flag
+    string measurement_set_name = 7;                  // Measurement set used for current job
+
+    // Progress indicators
+    JobState state = 8;                             // Current or last state
+    google.protobuf.Timestamp starttime = 10;       // Job start time
+    google.protobuf.Duration elapsed_duration = 11; // Elapsed run time
+}
+
+// Result from current or past job
+message JobResult
+{
+    uint64 job_id = 1;
+    string foup_id = 2;
+    ActionType action = 4;
+    JobState state = 5;
+    string measurement_set_name = 6;
+    google.protobuf.Timestamp endtime = 7;
+    optional bool extended_measurement = 8;
+    optional bool fitter_interference = 10;         // First flag indicating interference on fitter manager
+
+    oneof result
+    {
+        picarro.status.Error failure = 14;
+        Concentrations concentrations = 15;
+    }
+}
+
+// Reprocessed result for a specific job
+message ReprocessedResult
+{
+    uint64 job_id = 1;
+    string foup_id = 2;
+    google.protobuf.Timestamp reprocess_time = 6;
+    bool compound_hunting_interference = 8;     // Second flag when there is reprocessed data
+
+    // If interference_detected flag is false, we won't have these data
+    optional Concentrations reprocessed_species = 15;
+}
+
+// A list of reprocessed job results based on multiple job identities
+message ReprocessedResultList
+{
+    repeated ReprocessedResult result = 1;
+}
+
+enum JobState
+{
+    // (Measure) -> RUNNING (Controller state ACTIVE__MANUAL) -> WAITING (Controller state Standby)
+    JOB_INACTIVE    = 0;  // No job state yet
+    JOB_CREATED     = 1;  // New job added to the queue
+    JOB_RUNNING     = 2;  // Job started
+    JOB_WAITING     = 3;  // Job finished, waiting for data
+    JOB_CALCULATING = 4;  // Processing data (≈3.8s)
+    JOB_FINISHED    = 8;  // Job completed successfully
+    JOB_ABORTED     = 9;  // Job was cancelled by user
+    JOB_FAILED      = 10; // Job failed
+}
+
+message Concentrations
+{
+    // List of detailed compound information
+    repeated CompoundDetail concentrations = 1;
+
+    optional double total_volatile_organics = 2;
+    optional double total_amines = 3;
+    optional double total_acids = 4;
+}
+
+message CompoundDetail
+{
+    // Unique PubChem compound ID
+    uint64 cid = 1;
+
+    // Common name for compound
+    string name = 3;
+
+    // Concentration of compound
+    double concentration = 5;
+
+    // Unit of the concentration
+    Unit unit = 7;
+
+    // Analyzer the current concentration comes from, only exists for common species from multiple analyzers
+    optional string analyzer_name = 8;
+
+    // Probability of current result, <= 1.0
+    optional double probability = 9;
+}
+
+message AbortResult
+{
+    // Job existed and was aborted
+    bool aborted = 1;
+}
+
+message TimeBoundRequest
+{
+    optional TimeBound time_bound = 2;
+}
+
+message TimeBound
+{
+    google.protobuf.Timestamp start_time = 1;
+    google.protobuf.Timestamp end_time = 2;
+}
+
+message SpeciesList
+{
+    repeated string species = 1;
+}
+
+message OperationalStatus
+{
+    OperationalState state = 1;
+    OperationalFlags flags = 2;
+}
+
+enum Unit
+{
+    UNIT_UNSPECIFIED = 0;
+    UNIT_PPB = 1;
+    UNIT_PPM = 2;
+    UNIT_PERCENT = 3;
+}
+
+enum OperationalState
+{
+    OP_UNINITIALIZED          = 0; // System is not yet online
+    OP_INITIALIZING           = 1; // System is initializing
+    OP_IDLE                   = 2; // System is idle
+    OP_MEASURING              = 3; // System is running a measurement
+    OP_CALIBRATING_BACKGROUND = 4; // System is performing background calibration
+    OP_CALIBRATING_AMBIENT    = 5; // System is measuring ambient air
+    OP_VALIDATING_INLINE      = 6; // System is performing an inline validation
+    OP_CLEANING               = 7; // System is cleaning inlet
+    OP_DISABLED               = 9; // System is disabled (critical error or shutdown)
+}
+
+message OperationalFlags
+{
+    // Controller has been initialized.
+    bool initialized = 1;
+
+    // Controller is ready to perform an action.
+    // Implies `initialized && !active && !disabled`.
+    bool ready = 2;
+
+    // Controller is performing action.
+    // Implies `(measuring || calibrating || validating_inline) && !disabled`.
+    bool active = 3;
+
+    // Controller is performing a species measurement.
+    bool measuring = 4;
+
+    // Controller is cleaning the inlet.
+    bool cleaning = 5;
+
+    // Controller is performing a calibration task.
+    // Implies `calibrating_background || calibrating_ambient`.
+    bool calibrating = 8;
+
+    // Controller is performing a background calibration.
+    bool calibrating_background = 9;
+
+    // Controller is performing an ambient air measurement.
+    bool calibrating_ambient = 10;
+
+    // Controller is performing an inline validation measurement
+    bool validating_inline = 11;
+
+    // Controller is disabled due to a pending shutdown or critical error.
+    bool disabled = 15;
+}
+
+message AnalyzerFdcEvent
+{
+    // Name of the analyzer (e.g., "NUV", "MIR")
+    string analyzer_name = 1;
+
+    // Model of the analyzer (e.g., "SI3401", "SI9110")
+    string analyzer_model = 3;
+
+    // Reason for fdc publication (e.g. "new_alert", "escalated", "de_escalated")
+    PublishReason publish_reason = 4;
+
+    // String of fdc event from the analyzer
+    string fdc_event = 5;
+
+    // Severity level of the fdc event
+    picarro.status.Level severity = 6;
+
+    // Published time
+    google.protobuf.Timestamp timestamp = 7;
+}
+
+enum PublishReason
+{
+    PUBLISH_REASON_UNSPECIFIED = 0;
+    PUBLISH_REASON_NEW_ALERT = 1;  // First time seen the alert
+    PUBLISH_REASON_ESCALATED = 2;  // Alert is escalated due to repeated occurrences
+    PUBLISH_REASON_RECURRED = 3;  // Alert recurred after stopping for some time
+    PUBLISH_REASON_ESCALATION_CONTINUED = 4;  // Escalated alert continues
+    PUBLISH_REASON_DE_ESCALATED = 5;  // Alert is de-escalated
+}
+
+
+//==============================================================================
+// A `Signal` message is a multiplexer for various event types from the server,
+// streamed back to the client in response to a `watch()` invocation, above.
+// The event stream continues indefinitely until the client cancels the call or
+// disconnects.
+//
+// To listen for only specific event types, apply a corresponding signal filter
+// as input parameter to the `watch()` call. The filter should contain a list of
+// field indices to include or exclude, based on their field numbers within the
+// `oneof` block below. The filter also contains a `polarity` field to indicate
+// whether the listed fields are to be included (1) or excluded (0).  As such,
+// an empty filter means that all events will be streamed back to the client.
+
+message Signal
+{
+    oneof signal
+    {
+        // Overall operational status. Emitted on any change.
+        OperationalStatus op_status = 8;
+
+        // Job status.  Emitted upon change, and once per second during a run.
+        JobStatus job_status = 10;
+
+        // Job results. Emitted once a job has completed successfully.
+        JobResult job_result = 11;
+
+        // Reprocessed job results. Emitted when reprocessed data is available.
+        ReprocessedResult reprocessed_result = 12;
+
+        // Analyzer FDC event. Emitted when the analyzer reports fdc flags.
+        AnalyzerFdcEvent fdc_event = 15;
+
+    }
+}

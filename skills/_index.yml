@@ -1,0 +1,25 @@
+generated: '2026-08-02'
+method: generated
+source:
+  - grpc/
+  - https://github.com/picarro/sam-foup-public/blob/master/README.md
+notes: >-
+  No provider-published Agent Skills or AGENTS.md exist for Picarro. These are generated
+  from Picarro's own ProtoBuf service definitions and public README; every operation named
+  in a skill was grepped out of the .proto files in grpc/ and exists verbatim.
+skills:
+  - file: picarro-run-foup-measurement.md
+    name: Run a Picarro FOUP measurement and collect results
+    api: grpc/picarro-sam-foup-foup.proto
+    service: picarro.sam.foup.FOUP
+    operations: [get_service_info, start_job, abort_job, get_result, get_reprocessed_results_by_ids, get_reprocessed_results_time_bound, get_species_time_bound, watch]
+  - file: picarro-manage-measurement-sets.md
+    name: Manage Picarro measurement sets
+    api: grpc/picarro-sam-foup-measurementset.proto
+    service: picarro.sam.ms.MeasurementSet
+    operations: [get_pool_of_cids, get_all_measurement_sets, get_active_measurement_sets, add_measurement_set, edit_measurement_set, activate_measurement_sets, deactivate_measurement_sets, get_suggested_measurement_sets, sync_measurement_sets, watch]
+  - file: picarro-monitor-analyzer-health.md
+    name: Monitor Picarro analyzer health and FDC alerts
+    api: grpc/picarro-sam-foup-controller.proto
+    service: picarro.sam.controller.Controller
+    operations: [watch]

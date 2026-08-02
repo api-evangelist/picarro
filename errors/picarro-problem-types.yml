@@ -1,0 +1,98 @@
+generated: '2026-08-02'
+method: derived
+source: grpc/picarro-sam-foup-status.proto
+format: grpc-status-with-error-details
+notes: >-
+  Picarro publishes no OpenAPI and no RFC 9457 problem+json surface. Its error contract is
+  defined in ProtoBuf: a `picarro.status.Error` message is serialized by the server into
+  the `error_details()` field of the gRPC `::grpc::Status()` response after a failure, and
+  the same message is used for asynchronous error reporting on the `watch()` signal
+  streams. Everything below is transcribed from the .proto; no error text is invented.
+envelope:
+  transport: gRPC
+  carrier: grpc::Status error_details
+  message: picarro.status.Error
+  also_used_for: >-
+    Asynchronous error reporting — analyzer_health and analyzer_driver_started signals on
+    picarro.sam.controller.Controller/watch carry the same Error message.
+  fields:
+    - {name: domain, type: enum Domain, description: One of the error domains below.}
+    - {name: origin, type: string, description: 'Domain-specific origin, e.g. "Linux", "MyApplication", "HTTP".'}
+    - {name: level, type: enum Level, description: Priority / severity level.}
+    - {name: code, type: sint64, description: Origin-specific numeric id.}
+    - {name: symbol, type: string, description: Source-specific symbolic name, normally unique within each domain regardless of origin.}
+    - {name: timestamp, type: google.protobuf.Timestamp, description: Time of occurrence.}
+    - {name: attributes, type: picarro.variant.KeyValueMap, description: Event attributes.}
+    - {name: text, type: string, description: Description of the error, possibly expanded with attribute values.}
+domains:
+  - {value: 0, id: DOMAIN_NONE, title: No error}
+  - {value: 1, id: DOMAIN_APPLICATION, title: Application error, description: 'Error from the application; name indicated in `origin`.'}
+  - {value: 2, id: DOMAIN_SYSTEM, title: Operating-system error, description: 'OS errors; `origin` indicates the code space (e.g. "Linux").'}
+  - {value: 3, id: DOMAIN_PROCESS, title: Process exit, description: 'Process exit; use `kill -l` to interpret `code`/`symbol`.'}
+  - {value: 4, id: DOMAIN_DEVICE, title: Device / subsystem error, description: 'Error code from a subsystem; name indicated in `origin`.'}
+  - {value: 5, id: DOMAIN_SERVICE, title: Network service error, description: 'Error code from a network service (e.g. HTTP, SMTP).'}
+severity_levels:
+  - {value: 0, id: LEVEL_NONE, description: No event}
+  - {value: 1, id: LEVEL_TRACE, description: Trace event for detailed troubleshooting}
+  - {value: 2, id: LEVEL_DEBUG, description: Debug event for normal troubleshooting}
+  - {value: 3, id: LEVEL_INFO, description: Informational event only, no error}
+  - {value: 4, id: LEVEL_NOTICE, description: Important event}
+  - {value: 5, id: LEVEL_WARNING, description: Abnormal event, operation continues}
+  - {value: 6, id: LEVEL_ERROR, description: Operation failed, entity is still functional}
+  - {value: 7, id: LEVEL_CRITICAL, description: Operation failed, entity is disabled}
+  - {value: 8, id: LEVEL_FATAL, description: Reporting entity is disabled and cannot recover}
+operational_failure_signals:
+  - id: analyzer_health
+    channel: picarro.sam.controller.Controller/watch
+    payload: picarro.status.Error
+    mapping_key: analyzer identity (e.g. "Picarro_8008-AMSADS3008")
+    cached: true
+    remediation: >-
+      Cached server-side and re-emitted to new watchers, so a reconnecting client sees the
+      current alert set. mapping_action MAP_REMOVAL clears an alert.
+  - id: analyzer_driver_started
+    channel: picarro.sam.controller.Controller/watch
+    payload: picarro.status.Error
+    cached: false
+    remediation: >-
+      Implicitly invalidates all existing analyzer_health mappings — treat as a reset of
+      the health state after a SAM core restart.
+  - id: fdc_event
+    channel: picarro.sam.foup.FOUP/watch
+    payload: picarro.sam.foup.AnalyzerFdcEvent
+    since: FOUP v6.1
+    escalation:
+      - {reason: ESCALATED, description: Alert severity increased due to frequency/duration, trigger: consecutive count or duration exceeds threshold}
+      - {reason: ESCALATION_CONTINUED, description: Periodic reminder that the alert is still critical, trigger: every 60 seconds while escalated}
+      - {reason: DE_ESCALATED, description: Alert resolved automatically due to inactivity, trigger: no new occurrences for 60 seconds}
+    source: https://github.com/picarro/sam-foup-public/blob/master/README.md
+documented_operational_errors:
+  - id: measurement-set-mismatch
+    surface: picarro.sam.ms.MeasurementSet
+    description: >-
+      Measurement sets stored on the SAM computer can drift out of sync with the VOC
+      analyzer after loss of power or connection, impacting operation.
+    detection: 'Alerts from controller-api-tool monitor, or a UI notification of Measurement Sets discrepancy.'
+    remediation: >-
+      Confirm the mismatch is real and authorized, capture get_all_measurement_sets first,
+      then call sync_measurement_sets. Synchronization aligns the SAM computer to the VOC
+      analyzer and may remove sets or modify attributes; reapply with add_measurement_set /
+      edit_measurement_set_* afterwards.
+    source: https://github.com/picarro/sam-foup-public/blob/master/README.md
+  - id: mandatory-cid-missing
+    surface: picarro.sam.ms.MeasurementSet
+    description: 'cid 3776 (Isopropyl Alcohol) is mandatory and must be present in every measurement set cid list.'
+    remediation: Include 3776 in the cid list passed to add_measurement_set / edit_measurement_set.
+  - id: measurement-set-active
+    surface: picarro.sam.ms.MeasurementSet
+    description: An existing measurement set must be inactive before it can be edited.
+    remediation: Call deactivate_measurement_sets first, then edit, then reactivate.
+  - id: all-measurement-sets-deactivated
+    surface: picarro.sam.ms.MeasurementSet
+    description: When ALL measurement sets are deactivated the system halts and performs no operation.
+    remediation: Keep at least one measurement set active.
+x-evidence:
+  fetched: '2026-08-02'
+  sources:
+    - https://raw.githubusercontent.com/picarro/sam-foup-public/master/proto/status.proto
+    - https://raw.githubusercontent.com/picarro/sam-foup-public/master/README.md

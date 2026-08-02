@@ -1,0 +1,132 @@
+generated: '2026-08-02'
+method: derived
+source:
+  - grpc/picarro-sam-foup-foup.proto
+  - grpc/picarro-sam-foup-signal.proto
+  - grpc/picarro-sam-foup-version.proto
+  - https://github.com/picarro/sam-foup-public/blob/master/README.md
+  - well-known/picarro-openid-configuration.json
+notes: >-
+  Cross-cutting semantics of the Picarro Edge / Platform Server gRPC surface, transcribed
+  from Picarro's own ProtoBuf definitions and public README. Picarro publishes no REST
+  OpenAPI, so there is no HTTP header contract to record; several conventions that a REST
+  API would carry (pagination, sparse fields, request-id headers) simply do not exist here
+  and are recorded as `not_applicable` rather than guessed.
+transport:
+  protocol: gRPC (HTTP/2)
+  encoding: ProtoBuf 3 (proto3)
+  security: plaintext / "insecure" by default on both servers
+  ports: {edge: 3343, platform_server: 7528}
+  reflection: true
+  reflection_note: gRPC reflection is enabled, so grpcui and grpcurl work without a local descriptor set.
+authentication:
+  edge_grpc: none — plaintext gRPC on a customer-controlled instrument network
+  cloud_platform: OpenID Connect / SAML 2.0 via Keycloak (realm "picarro")
+  see: authentication/picarro-authentication.yml
+idempotency:
+  supported: false
+  detail: >-
+    No idempotency key, request key, or de-duplication contract is documented anywhere in
+    the .proto files or the README. `start_job` returns a server-assigned unique Run ID
+    (JobIdentity); replaying start_job creates a new job. `abort_job` accepts an optional
+    JobIdentity and cancels only if it matches the current job, which makes abort safe to
+    repeat but is a guard, not idempotency.
+    NOTE: no `Idempotency` pointer is emitted in apis.yml — Picarro has no idempotency
+    contract to point at.
+  natural_idempotence:
+    - {rpc: get_service_info, safe: true}
+    - {rpc: get_result, safe: true}
+    - {rpc: get_all_measurement_sets, safe: true}
+    - {rpc: abort_job, safe: true, note: 'Guarded by JobIdentity match; a second abort is a no-op.'}
+pagination:
+  supported: false
+  detail: >-
+    No cursor, offset, page-size or continuation-token field appears in any request
+    message. Bulk reads are bounded by TIME instead: get_reprocessed_results_time_bound
+    and get_species_time_bound accept a TimeBoundRequest and default to the past 24 hours
+    when no range is supplied. get_reprocessed_results_by_ids takes an explicit
+    JobIdentityList.
+  bounding:
+    style: time-range
+    request: picarro.sam.foup.TimeBoundRequest
+    default_window: past 24 hours
+streaming:
+  style: server-streaming pub/sub over gRPC
+  method: 'watch(picarro.signal.Filter) returns (stream Signal)'
+  present_on: [FOUP, MeasurementSet, Controller, NetConfig, SysConfig, Upgrade]
+  topic_selector: >-
+    The `oneof signal` field number inside the service's Signal message acts as the topic
+    id. picarro.signal.Filter carries `polarity` (true = include the listed indices, false
+    = exclude them) and a repeated list of those field numbers. An EMPTY filter streams
+    every event.
+  mapping_signals:
+    detail: >-
+      Some streams are "mapping signals" — the Signal message adds `mapping_action`
+      (MAP_NONE | MAP_ADDITION | MAP_REMOVAL | MAP_UPDATE) and `mapping_key` so the stream
+      behaves like a keyed cache replication feed rather than a plain event log.
+    example: 'Controller.analyzer_health keyed by analyzer identity, e.g. "Picarro_8008-AMSADS3008"'
+  caching_and_replay:
+    detail: >-
+      Cached signals are re-emitted in response to each new watch() invocation, so a
+      reconnecting client resynchronizes state without a separate snapshot call.
+      analyzer_health is cached; analyzer_driver_started and Controller.raw are not.
+  cadence:
+    - {signal: job_status, cadence: 'on change, and once per second during a run'}
+    - {signal: op_status, cadence: on any change}
+    - {signal: job_result, cadence: once per successfully completed job}
+    - {signal: fdc_event, cadence: 'on analyzer FDC flag; ESCALATION_CONTINUED reminder every 60s while escalated; DE_ESCALATED after 60s of inactivity'}
+  see: asyncapi/picarro-sam-foup-asyncapi.yml
+versioning:
+  scheme: api-level enumeration embedded in the .proto
+  mechanism: >-
+    Each service .proto declares APILEVEL_MAJOR / APILEVEL_MINOR / APILEVEL_PATCH
+    enumerated values. Peers construct their API version from these to indicate which
+    version of the interface file they were built against. get_service_info returns a
+    ServiceInfo carrying the server's name and API version so a client can compare.
+  semantics:
+    APILEVEL_MAJOR: increment if breaking changes are introduced
+    APILEVEL_MINOR: increment for backwards-compatible interface changes
+    APILEVEL_PATCH: increment when a change is backwards and forwards compatible
+    APILEVEL_TWEAK: deprecated
+  current_api_level: '1.0.0 (foup.proto, observed 2026-08-02)'
+  component_versions: >-
+    picarro.version.Version carries major/minor/patch, an optional printable_version and
+    build_number; picarro.version.ComponentVersions maps component name to Version.
+  release_versions: {debian: 6.1.0-5, python_wheels: 5.0.0}
+  discovery_rpc: get_service_info
+  see: lifecycle/picarro-lifecycle.yml
+error_envelope:
+  style: 'grpc::Status with a serialized picarro.status.Error in error_details()'
+  problem_json: false
+  severity_scale: 'LEVEL_TRACE .. LEVEL_FATAL (9 levels)'
+  domains: [DOMAIN_NONE, DOMAIN_APPLICATION, DOMAIN_SYSTEM, DOMAIN_PROCESS, DOMAIN_DEVICE, DOMAIN_SERVICE]
+  see: errors/picarro-problem-types.yml
+request_tracing:
+  request_id_header: not_applicable
+  correlation: >-
+    Correlation is by domain object, not by transport id: start_job returns a JobIdentity
+    (Run ID) that keys abort_job, get_result and every job_status / job_result /
+    reprocessed_result signal for that run. Controller signals correlate by mapping_key
+    (analyzer identity).
+rate_limiting:
+  documented: false
+  detail: No rate limits, quotas or throttling headers are documented for the edge gRPC services.
+metadata:
+  custom_metadata: not_documented
+  attributes: >-
+    picarro.status.Error carries a free-form picarro.variant.KeyValueMap of event
+    attributes; picarro.variant.Value is the dynamically typed value used across the
+    interfaces.
+field_expansion:
+  supported: false
+  detail: 'No expand / fields / include parameter exists; ProtoBuf field masks are not used.'
+capacity_constraints:
+  - {constraint: measurement_set_slots, value: 9, detail: 'Empty slots on first install, excluding the standard "FOUP" set.'}
+  - {constraint: mandatory_compound_id, value: 3776, detail: 'Isopropyl Alcohol — must be in every measurement set cid list.'}
+  - {constraint: all_sets_deactivated, detail: 'If every measurement set is deactivated the system halts and performs no operation.'}
+x-evidence:
+  fetched: '2026-08-02'
+  sources:
+    - https://raw.githubusercontent.com/picarro/sam-foup-public/master/README.md
+    - https://raw.githubusercontent.com/picarro/sam-foup-public/master/proto/foup.proto
+    - https://raw.githubusercontent.com/picarro/sam-foup-public/master/proto/signal.proto

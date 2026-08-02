@@ -1,0 +1,296 @@
+asyncapi: 3.0.0
+info:
+  title: Picarro Edge — SAM FOUP Signal Streams
+  version: 6.1.0
+  description: >-
+    Picarro Edge implements a publish/subscribe surface on top of gRPC server streaming:
+    every service exposes a `watch(picarro.signal.Filter)` method that returns a stream of
+    `Signal` messages, where the `oneof signal` field acts as the topic. This document
+    describes that real event surface.
+
+
+    PROVENANCE: Picarro publishes NO AsyncAPI document. This description was DERIVED from
+    Picarro's own first-party ProtoBuf interface definitions in
+    https://github.com/picarro/sam-foup-public (mirrored verbatim in this repo under
+    `grpc/`). Every channel, message and enumerated value below appears in those .proto
+    files; nothing has been invented. It is an API Evangelist derivation, not a provider
+    artifact.
+  contact:
+    name: Tor Slettnes
+    email: tslettnes@picarro.com
+    url: https://github.com/picarro/sam-foup-public
+  externalDocs:
+    url: https://github.com/picarro/sam-foup-public/blob/master/README.md
+    description: Picarro SAM FOUP getting-started guide
+defaultContentType: application/grpc+proto
+
+servers:
+  edge:
+    host: 'localhost:3343'
+    protocol: grpc
+    description: >-
+      picarro-edge, the FOUP job-control gRPC server. Plaintext ("insecure") h2c by
+      default; deployed on the customer's instrument network. Use --host=ADDRESS to reach
+      a remote instance. gRPC reflection is enabled.
+  platform:
+    host: 'localhost:7528'
+    protocol: grpc
+    description: >-
+      platformserver, managing host settings on the SLIM computer. Plaintext gRPC,
+      reflection enabled.
+
+channels:
+  foupSignals:
+    address: picarro.sam.foup.FOUP/watch
+    title: FOUP measurement signals
+    description: >-
+      Server stream of picarro.sam.foup.Signal. Clients pass a picarro.signal.Filter with
+      the oneof field numbers to include (polarity=true) or exclude (polarity=false); an
+      empty filter streams every event.
+    servers: [{$ref: '#/servers/edge'}]
+    messages:
+      opStatus: {$ref: '#/components/messages/OperationalStatus'}
+      jobStatus: {$ref: '#/components/messages/JobStatus'}
+      jobResult: {$ref: '#/components/messages/JobResult'}
+      reprocessedResult: {$ref: '#/components/messages/ReprocessedResult'}
+      fdcEvent: {$ref: '#/components/messages/AnalyzerFdcEvent'}
+  measurementSetSignals:
+    address: picarro.sam.ms.MeasurementSet/watch
+    title: Measurement set signals
+    description: Server stream of picarro.sam.ms.Signal.
+    servers: [{$ref: '#/servers/edge'}]
+    messages:
+      msOpResponse: {$ref: '#/components/messages/MSOpResponse'}
+      suggestedMs: {$ref: '#/components/messages/SuggestedMeasurementSets'}
+  controllerSignals:
+    address: picarro.sam.controller.Controller/watch
+    title: SAM controller health signals
+    description: >-
+      Server stream of picarro.sam.controller.Signal. This is a "mapping signal": each
+      message carries mapping_action (MAP_ADDITION | MAP_UPDATE | MAP_REMOVAL) and
+      mapping_key (the analyzer identity, e.g. "Picarro_8008-AMSADS3008"). analyzer_health
+      is cached server-side and re-emitted to new watchers.
+    servers: [{$ref: '#/servers/edge'}]
+    messages:
+      raw: {$ref: '#/components/messages/RawPicarroMQ'}
+      analyzerDriverStarted: {$ref: '#/components/messages/AnalyzerDriverStarted'}
+      analyzerHealth: {$ref: '#/components/messages/AnalyzerHealth'}
+  netConfigSignals:
+    address: picarro.platform.netconfig.NetConfig/watch
+    title: Network configuration signals
+    description: Server stream of picarro.platform.netconfig.Signal.
+    servers: [{$ref: '#/servers/platform'}]
+    messages:
+      netconfig: {$ref: '#/components/messages/GenericPlatformSignal'}
+  sysConfigSignals:
+    address: picarro.platform.sysconfig.SysConfig/watch
+    title: System configuration signals
+    description: Server stream of picarro.platform.sysconfig.Signal.
+    servers: [{$ref: '#/servers/platform'}]
+    messages:
+      sysconfig: {$ref: '#/components/messages/GenericPlatformSignal'}
+  upgradeSignals:
+    address: picarro.platform.upgrade.Upgrade/watch
+    title: Software upgrade signals
+    description: Server stream of picarro.platform.upgrade.Signal.
+    servers: [{$ref: '#/servers/platform'}]
+    messages:
+      upgrade: {$ref: '#/components/messages/GenericPlatformSignal'}
+
+operations:
+  receiveFoupSignals:
+    action: receive
+    channel: {$ref: '#/channels/foupSignals'}
+    title: Watch FOUP events
+    description: 'CLI equivalent: foup-api-tool monitor [op_status|job_status|job_result|reprocessed_result|fdc_event]'
+  receiveMeasurementSetSignals:
+    action: receive
+    channel: {$ref: '#/channels/measurementSetSignals'}
+    title: Watch measurement-set events
+    description: 'CLI equivalent: measurementset-api-tool monitor'
+  receiveControllerSignals:
+    action: receive
+    channel: {$ref: '#/channels/controllerSignals'}
+    title: Watch SAM controller health events
+    description: 'CLI equivalent: controller-api-tool monitor analyzer_health analyzer_driver'
+  receiveNetConfigSignals:
+    action: receive
+    channel: {$ref: '#/channels/netConfigSignals'}
+    title: Watch network configuration changes
+  receiveSysConfigSignals:
+    action: receive
+    channel: {$ref: '#/channels/sysConfigSignals'}
+    title: Watch system configuration changes
+  receiveUpgradeSignals:
+    action: receive
+    channel: {$ref: '#/channels/upgradeSignals'}
+    title: Watch software upgrade progress
+
+components:
+  messages:
+    OperationalStatus:
+      name: op_status
+      title: Overall operational status
+      summary: Emitted on any change of system operational state.
+      x-proto-field: 8
+      x-proto-type: picarro.sam.foup.OperationalStatus
+      payload: {$ref: '#/components/schemas/OperationalStatus'}
+    JobStatus:
+      name: job_status
+      title: Job status
+      summary: Emitted upon change, and once per second during a run.
+      x-proto-field: 10
+      x-proto-type: picarro.sam.foup.JobStatus
+      payload: {$ref: '#/components/schemas/JobStatus'}
+    JobResult:
+      name: job_result
+      title: Job results
+      summary: Emitted once a job has completed successfully.
+      x-proto-field: 11
+      x-proto-type: picarro.sam.foup.JobResult
+      payload: {$ref: '#/components/schemas/JobResult'}
+    ReprocessedResult:
+      name: reprocessed_result
+      title: Reprocessed job results
+      summary: Emitted when reprocessed data is available.
+      x-proto-field: 12
+      x-proto-type: picarro.sam.foup.ReprocessedResult
+      payload: {$ref: '#/components/schemas/JobResult'}
+    AnalyzerFdcEvent:
+      name: fdc_event
+      title: Analyzer Fault Detection and Classification event
+      summary: >-
+        Emitted when the analyzer reports FDC flags. Introduced in FOUP v6.1. Carries an
+        escalation reason (ESCALATED, ESCALATION_CONTINUED every 60s while critical, or
+        DE_ESCALATED after 60s of inactivity).
+      x-proto-field: 15
+      x-proto-type: picarro.sam.foup.AnalyzerFdcEvent
+      payload: {$ref: '#/components/schemas/AnalyzerFdcEvent'}
+    MSOpResponse:
+      name: ms_op_response
+      title: Measurement set operation status
+      summary: 'Emitted on measurement-set operation status change (MS_OP_ACCEPTED, MS_OP_SUCCESS, ...).'
+      x-proto-field: 7
+      x-proto-type: picarro.sam.ms.MSOpResponse
+      payload: {$ref: '#/components/schemas/MSOpResponse'}
+    SuggestedMeasurementSets:
+      name: suggested_ms
+      title: Suggested measurement sets
+      summary: Measurement-set additions the system suggests from historical data.
+      x-proto-field: 13
+      x-proto-type: picarro.sam.ms.MeasurementSetList
+      payload: {$ref: '#/components/schemas/MeasurementSetList'}
+    RawPicarroMQ:
+      name: raw
+      title: Raw PicarroMQ message
+      summary: >-
+        Raw message received over PicarroMQ from SAM core. mapping_key is the PicarroMQ
+        topic; mapping_action is fixed as MAP_UPDATE. Not cached server-side. Debugging use.
+      x-proto-field: 8
+      x-proto-type: picarro.variant.Value
+      payload: {$ref: '#/components/schemas/VariantValue'}
+    AnalyzerDriverStarted:
+      name: analyzer_driver_started
+      title: Analyzer driver started
+      summary: >-
+        mapping_action fixed as MAP_ADDITION; mapping_key is the analyzer identity
+        (e.g. "Picarro_9038-NUV1083"). Implicitly invalidates existing analyzer_health
+        mappings. Not cached server-side.
+      x-proto-field: 14
+      x-proto-type: picarro.status.Error
+      payload: {$ref: '#/components/schemas/Error'}
+    AnalyzerHealth:
+      name: analyzer_health
+      title: Analyzer health alert
+      summary: >-
+        mapping_action indicates added/updated/removed; mapping_key is the analyzer
+        identity. Cached server-side and re-emitted on subsequent watch() calls.
+      x-proto-field: 15
+      x-proto-type: picarro.status.Error
+      payload: {$ref: '#/components/schemas/Error'}
+    GenericPlatformSignal:
+      name: signal
+      title: Platform service signal
+      summary: >-
+        Signal multiplexer emitted by the platform services. See the corresponding .proto
+        file in grpc/ for the exact oneof variants.
+      payload: {type: object}
+
+  schemas:
+    Error:
+      type: object
+      description: picarro.status.Error — the common status/exception payload.
+      properties:
+        domain:
+          type: string
+          enum: [DOMAIN_NONE, DOMAIN_APPLICATION, DOMAIN_SYSTEM, DOMAIN_PROCESS, DOMAIN_DEVICE, DOMAIN_SERVICE]
+        origin: {type: string, description: 'Domain-specific origin, e.g. "Linux", "HTTP".'}
+        level:
+          type: string
+          enum: [LEVEL_NONE, LEVEL_TRACE, LEVEL_DEBUG, LEVEL_INFO, LEVEL_NOTICE, LEVEL_WARNING, LEVEL_ERROR, LEVEL_CRITICAL, LEVEL_FATAL]
+        code: {type: integer, format: int64, description: Origin-specific numeric id.}
+        symbol: {type: string, description: Source-specific symbolic name, unique within each domain.}
+        timestamp: {type: string, format: date-time}
+        attributes: {type: object, description: picarro.variant.KeyValueMap of event attributes.}
+        text: {type: string, description: Description of the error, expanded with attribute values.}
+    OperationalStatus:
+      type: object
+      description: Overall system operational state.
+      properties:
+        state:
+          type: string
+          enum: [OP_UNINITIALIZED, OP_INITIALIZING]
+          description: >-
+            Partial enumeration — see picarro.sam.foup.OperationalState in
+            grpc/picarro-sam-foup-foup.proto for the full set.
+    JobStatus:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [JOB_INACTIVE]
+          description: >-
+            Partial enumeration — see picarro.sam.foup.JobState in
+            grpc/picarro-sam-foup-foup.proto for the full state machine
+            (Measure -> RUNNING -> WAITING).
+    JobResult:
+      type: object
+      description: Measured concentrations for a completed job.
+      properties:
+        unit:
+          type: string
+          enum: [UNIT_UNSPECIFIED, UNIT_PPB]
+    AnalyzerFdcEvent:
+      type: object
+      properties:
+        publish_reason:
+          type: string
+          enum: [PUBLISH_REASON_UNSPECIFIED, PUBLISH_REASON_NEW_ALERT]
+          description: >-
+            Partial enumeration — see picarro.sam.foup.PublishReason. The README documents
+            the escalation reasons ESCALATED, ESCALATION_CONTINUED and DE_ESCALATED.
+    MSOpResponse:
+      type: object
+      description: 'Measurement-set operation acknowledgement/result (MS_OP_ACCEPTED, MS_OP_SUCCESS).'
+    MeasurementSetList:
+      type: object
+      description: A list of measurement sets with their compound-id (cid) membership.
+    VariantValue:
+      type: object
+      description: picarro.variant.Value — a dynamically typed value.
+
+x-provenance:
+  generated: '2026-08-02'
+  method: derived
+  source:
+    - grpc/picarro-sam-foup-foup.proto
+    - grpc/picarro-sam-foup-measurementset.proto
+    - grpc/picarro-sam-foup-controller.proto
+    - grpc/picarro-sam-foup-signal.proto
+    - grpc/picarro-sam-foup-status.proto
+    - https://github.com/picarro/sam-foup-public/blob/master/README.md
+  provider_publishes_asyncapi: false
+  note: >-
+    API Evangelist derivation from Picarro's published ProtoBuf definitions. Schemas are
+    intentionally partial where the .proto enumerations were not fully transcribed; the
+    .proto files in grpc/ remain the authoritative contract.

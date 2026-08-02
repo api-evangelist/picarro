@@ -1,0 +1,111 @@
+generated: '2026-08-02'
+method: derived
+source:
+  - well-known/picarro-openid-configuration.json
+  - grpc/picarro-sam-foup-foup.proto
+  - grpc/picarro-sam-foup-status.proto
+  - https://www.picarro.com/ensuring_data_security_and_compliance
+standards:
+  - id: oauth2
+    conforms: true
+    evidence: >-
+      Keycloak realm advertises authorization_code, implicit, refresh_token, password and
+      client_credentials grants with authorization, token, introspection (RFC 7662) and
+      revocation (RFC 7009) endpoints.
+    source: well-known/picarro-openid-configuration.json
+  - id: oidc-discovery
+    conforms: true
+    evidence: 'Anonymous /.well-known/openid-configuration served at the Keycloak realm path; issuer, jwks_uri and claims_supported present.'
+    source: well-known/picarro-openid-configuration.json
+  - id: oidc-core
+    conforms: true
+    evidence: 'openid/profile/email/address/phone scopes; id_token signing and encryption algorithms advertised; userinfo endpoint present.'
+  - id: rfc7636-pkce
+    conforms: true
+    evidence: 'code_challenge_methods_supported: [plain, S256]'
+  - id: rfc7591-dynamic-client-registration
+    conforms: true
+    evidence: 'registration_endpoint: .../clients-registrations/openid-connect'
+  - id: rfc8705-mtls-client-auth
+    conforms: true
+    evidence: 'tls_client_auth in token_endpoint_auth_methods_supported; tls_client_certificate_bound_access_tokens: true'
+  - id: oidc-backchannel-logout
+    conforms: true
+    evidence: 'backchannel_logout_supported: true, backchannel_logout_session_supported: true'
+  - id: rfc8414-oauth-authorization-server-metadata
+    conforms: false
+    evidence: '/.well-known/oauth-authorization-server returned 404 at the realm path; only the OIDC discovery document is published.'
+  - id: saml2
+    conforms: true
+    evidence: >-
+      An anonymous GET of https://pcubed.picarro.com/ redirects to
+      /auth/realms/picarro/protocol/saml with a deflated SAMLRequest and RelayState.
+  - id: grpc
+    conforms: true
+    evidence: 'Two first-party gRPC servers (picarro-edge:3343, platformserver:7528) with published service definitions.'
+    source: grpc/
+  - id: grpc-server-reflection
+    conforms: true
+    evidence: 'README documents that Picarro Edge is built with gRPC reflection support and works with grpcui out of the box.'
+  - id: protobuf3
+    conforms: true
+    evidence: 'Every published .proto declares syntax = "proto3".'
+    source: grpc/
+  - id: semver
+    conforms: partial
+    evidence: >-
+      Interface versioning uses APILEVEL_MAJOR/MINOR/PATCH enumerations with semver-like
+      semantics (major = breaking, minor = backwards compatible, patch = backwards and
+      forwards compatible), and picarro.version.Version carries major/minor/patch. It is a
+      ProtoBuf-embedded API level, not a published semver policy document.
+  - id: rfc9457-problem-details
+    conforms: false
+    evidence: 'No HTTP/JSON error surface; errors are picarro.status.Error in grpc::Status error_details.'
+  - id: openapi
+    conforms: false
+    evidence: 'No OpenAPI/Swagger document found on any host after probing /openapi.json, /openapi.yaml, /swagger.json, /api-docs, /docs, /redoc.'
+  - id: asyncapi
+    conforms: false
+    evidence: >-
+      Picarro publishes no AsyncAPI. A real event surface exists (server-streaming watch()
+      signals) and is described in a DERIVED AsyncAPI 3.0.0 document in this repo.
+    source: asyncapi/picarro-sam-foup-asyncapi.yml
+  - id: graphql
+    conforms: false
+    evidence: 'No /graphql surface found on any host.'
+  - id: mcp
+    conforms: false
+    evidence: 'No hosted or published Model Context Protocol server found.'
+  - id: a2a
+    conforms: false
+    evidence: >-
+      /.well-known/agent-card.json and /.well-known/agent.json probed on every Picarro
+      host; www and pcubed returned 404, trust/status/fenceline returned HTML SPA
+      catch-alls which were rejected. No agent card exists.
+  - id: rfc9116-security-txt
+    conforms: false
+    evidence: 'No /.well-known/security.txt on any Picarro host.'
+  - id: iso-27001-2022
+    conforms: true
+    evidence: 'Certified by A-LIGN, announced November 2025.'
+    source: security/picarro-trust-center.yml
+  - id: iso-27017
+    conforms: true
+    evidence: 'Cloud security certification by A-LIGN, announced November 2025.'
+    source: security/picarro-trust-center.yml
+  - id: iso-27018
+    conforms: true
+    evidence: 'Cloud PII protection certification by A-LIGN, announced November 2025.'
+    source: security/picarro-trust-center.yml
+  - id: soc2-type2
+    conforms: true
+    evidence: 'SOC 2 Type 2 examination completed with A-LIGN, announced November 2025.'
+    source: security/picarro-trust-center.yml
+  - id: iso-9001-2015
+    conforms: true
+    evidence: 'Quality management system certification published at picarro.com/picarros_iso_90012015_certification.'
+  - id: gdpr
+    conforms: partial
+    evidence: 'Publishes an EU & US privacy policy and a separate California-residents policy; no dedicated GDPR/DPA page found.'
+x-evidence:
+  fetched: '2026-08-02'

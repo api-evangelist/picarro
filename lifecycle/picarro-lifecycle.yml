@@ -1,0 +1,69 @@
+generated: '2026-08-02'
+method: searched
+source:
+  - https://github.com/picarro/sam-foup-public/blob/master/README.md
+  - grpc/picarro-sam-foup-foup.proto
+  - https://status.picarro.com/status/gas
+versioning:
+  scheme: protobuf-api-level
+  detail: >-
+    Each service .proto embeds APILEVEL_MAJOR / APILEVEL_MINOR / APILEVEL_PATCH enumerated
+    values that peers use to construct their API version, indicating which version of the
+    interface file they were built against. `get_service_info` returns a ServiceInfo with
+    the server name and API version so a client can compare at runtime.
+  semantics:
+    major: increment if breaking changes are introduced
+    minor: increment for backwards compatible interface changes
+    patch: increment when a change is backwards and forwards compatible
+    tweak: APILEVEL_TWEAK is marked Deprecated in foup.proto
+  current_api_level: '1.0.0'
+  current_release: 'FOUP v6.1 (packages 6.1.0-5; Python wheels 5.0.0)'
+  docs: https://github.com/picarro/sam-foup-public
+  runtime_discovery_rpc: picarro.sam.foup.FOUP/get_service_info
+deprecation:
+  policy_url: null
+  policy_published: false
+  sunset_header: false
+  detail: >-
+    No written deprecation or sunset policy is published. The only deprecation signal in
+    the estate is field-level: APILEVEL_TWEAK is annotated "// Deprecated" in foup.proto.
+    The APILEVEL_MAJOR contract ("increment this if breaking changes are introduced") is
+    the closest thing to a compatibility commitment.
+  deprecated_elements:
+    - {element: 'picarro.sam.foup.APILevel.APILEVEL_TWEAK', source: grpc/picarro-sam-foup-foup.proto, note: annotated Deprecated}
+  incomplete_surfaces:
+    - {element: 'picarro.platform.sysconfig.SysConfig', note: 'README marks this service "(incomplete)".'}
+upgrade:
+  mechanism: Picarro release package (.picpac)
+  service: picarro.platform.upgrade.Upgrade
+  rpcs: [scan, list_sources, list_available, best_available, install, finalize, watch]
+  tool: upgrade-tool
+  detail: >-
+    Software lifecycle for deployed edge systems is itself an API: clients scan a package
+    source, enumerate available versions, select the best available, install and finalize,
+    watching progress over the signal stream.
+sla:
+  url: null
+  uptime_target: null
+  published: false
+status_page:
+  url: https://status.picarro.com/status/gas
+  platform: Uptime Kuma
+  public_api: https://status.picarro.com/api/status-page/gas
+  title: Picarro Gas Applications Status
+  scope: P-Cubed cloud only (the gas applications); no status page found for the analytical instruments or semiconductor lines
+  monitor_groups:
+    - name: P-Cubed NA
+      monitors: [P-Cubed NA, P-Cubed NA ERV, P-Cubed NA LSRV, P-Cubed NA Maps ArcGIS, P-Cubed NA NAV]
+    - name: P-Cubed EU
+      monitors: [P-Cubed EU, P-Cubed EU ERV, P-Cubed EU LSRV, P-Cubed EU Maps ArcGIS, P-Cubed EU NAV]
+    - name: P-Cubed EU2
+      monitors: [P-Cubed EU2, P-Cubed EU2 ERV, P-Cubed EU2 LSRV, P-Cubed EU2 Maps ArcGIS, P-Cubed EU2 NAV]
+  regions_implied: [North America, Europe, Europe (second region)]
+support:
+  technical_support: https://www.picarro.com/support/caseform
+  community: https://www.picarro.com/support/community
+  interface_contact: {name: Tor Slettnes, email: tslettnes@picarro.com, role: 'Author of the published gRPC interfaces; named contact in the README'}
+x-evidence:
+  - {url: 'https://status.picarro.com/api/status-page/gas', http_status: 200, content_type: application/json, fetched: '2026-08-02'}
+  - {url: 'https://raw.githubusercontent.com/picarro/sam-foup-public/master/README.md', http_status: 200, fetched: '2026-08-02'}

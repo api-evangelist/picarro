@@ -1,0 +1,80 @@
+// -*- protocol-buffers -*-
+//==============================================================================
+/// @file controller.proto
+/// @brief Miscellaneous generic events emitted from SAM Core
+/// @author Tor Slettnes <tslettnes@picarro.com>
+//==============================================================================
+
+syntax = "proto3";
+package picarro.sam.controller;
+
+import "signal.proto";
+import "status.proto";
+import "variant.proto";
+
+service Controller
+{
+    // Listen for event updates from the server.
+    //
+    // The input is a filter mask indicating which event types to monitor,
+    // indicated by their respective field numbers in the `Signal` message,
+    // below. By default, _all_ events are streamed back.
+    //
+    // The output is a stream of `Signal` messages, each containing exactly
+    // one event as described below.
+    rpc watch (picarro.signal.Filter)
+        returns (stream Signal);
+}
+
+
+//==============================================================================
+// Controller signals, emitted whenever any corresponding ZMQ event is received
+// from SAM Core.
+//
+// To listen for only specific event types, apply a corresponding signal filter
+// as input parameter to the `watch()` call. The filter should contain a list of
+// field indices to include or exclude, based on their field numbers within the
+// `oneof` block below. The filter also contains a `polarity` field to indicate
+// whether the listed fields are to be included (1) or excluded (0).  As such,
+// an empty filter means that all events will be streamed back to the client.
+
+message Signal
+{
+    // Mapping type, one of: MAP_NONE, MAP_ADDITION, MAP_REMOVAL, MAP_UPDATE.
+    // In the case of a MappingSignal (like `analyzer_health` below), indicates
+    // whether this instance is added, updated, or removed.
+    picarro.signal.MappingAction mapping_action = 1;
+
+    // Mapping key for the item that was added/removed/updated.
+    string mapping_key = 2;
+
+    oneof signal
+    {
+        // Raw message received over PicarroMQ from SAM core.  Data model varies
+        // across topics or even within topics; for instance, time
+        // representations are not standarized.  Useful mainly for debugging.
+        //
+        // * `mapping_action` is fixed as MAP_UPDATE
+        // * `mapping_key` contains the PicarroMQ message topic
+        //
+        // This event is not cached on the server side.
+        picarro.variant.Value raw = 8;
+
+        // Analyzer driver started.
+        // * `mapping_action` is fixed as MAP_ADDITION.
+        // * `mapping_key` indicates analyzer identity, e.g. `"Picarro_9038-NUV1083"`.
+        //
+        // This signal is not cached on the server side.  However, when emitted
+        // it implicitly removes any existing `analyzer_health` mappings, below,
+        // on the assumption that they are invalidated after a SAM core restart.
+        picarro.status.Error analyzer_driver_started = 14;
+
+        // Analyzer health alert.
+        // * `mapping_action` indicates whether alarm is added, updated, or removed.
+        // * `mapping_key` indicates analyzer identity, e.g. `"Picarro_8008-AMSADS3008"`.
+        //
+        // This signal is cached on the server side, and re-emitted in response
+        // to subsequent `watch()` invocations.
+        picarro.status.Error analyzer_health = 15;
+    }
+}

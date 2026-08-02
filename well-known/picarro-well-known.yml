@@ -1,0 +1,66 @@
+generated: '2026-08-02'
+method: probed
+source: https://identity-prod.picarro.com/auth/realms/picarro/.well-known/openid-configuration
+notes: >-
+  Picarro serves no RFC 8615 documents from its marketing, portal, or status hosts.
+  The one real discovery document in the estate is the Keycloak realm OIDC metadata
+  behind the P-Cubed single sign-on, which is published anonymously at the Keycloak
+  realm path (not the host root). Hosts marked html-catchall answered 200 with an SPA
+  HTML shell for every /.well-known/* path probed and were rejected as false positives.
+hosts:
+  - host: https://identity-prod.picarro.com
+    role: identity / SSO (Keycloak, realm "picarro")
+    documents:
+      - path: /auth/realms/picarro/.well-known/openid-configuration
+        status: 200
+        content_type: application/json
+        file: picarro-openid-configuration.json
+      - path: /auth/realms/picarro/protocol/openid-connect/certs
+        status: 200
+        content_type: application/json
+        note: JWKS endpoint referenced by the discovery document (not saved verbatim)
+      - path: /.well-known/openid-configuration
+        status: 404
+      - path: /auth/realms/picarro/.well-known/oauth-authorization-server
+        status: 404
+  - host: https://www.picarro.com
+    role: corporate / marketing site
+    documents:
+      - {path: /.well-known/security.txt, status: 404}
+      - {path: /.well-known/openid-configuration, status: 404}
+      - {path: /.well-known/oauth-authorization-server, status: 404}
+      - {path: /.well-known/api-catalog, status: 404}
+      - {path: /.well-known/ai-plugin.json, status: 404}
+      - {path: /.well-known/agent-card.json, status: 404}
+      - {path: /.well-known/agent.json, status: 404}
+      - {path: /llms.txt, status: 404}
+  - host: https://pcubed.picarro.com
+    role: P-Cubed cloud platform (SAML/OIDC gated)
+    documents:
+      - {path: /.well-known/security.txt, status: 404}
+      - {path: /.well-known/openid-configuration, status: 404}
+      - {path: /.well-known/agent-card.json, status: 404}
+      - {path: /.well-known/agent.json, status: 404}
+      - {path: /openapi.json, status: 404}
+      - {path: /swagger.json, status: 404}
+  - host: https://trust.picarro.com
+    role: Vanta-hosted trust center
+    html_catchall: true
+    documents:
+      - {path: /.well-known/security.txt, status: 200, content_type: text/html, accepted: false, reason: SPA HTML catch-all}
+      - {path: /.well-known/agent-card.json, status: 200, content_type: text/html, accepted: false, reason: SPA HTML catch-all}
+  - host: https://status.picarro.com
+    role: Uptime Kuma status page
+    html_catchall: true
+    documents:
+      - {path: /.well-known/security.txt, status: 200, content_type: text/html, accepted: false, reason: SPA HTML catch-all}
+      - {path: /api/status-page/gas, status: 200, content_type: application/json, note: public status-page JSON (not a well-known document)}
+  - host: https://fenceline.picarro.com
+    role: fenceline monitoring product site
+    html_catchall: true
+    documents:
+      - {path: /.well-known/openid-configuration, status: 200, content_type: text/html, accepted: false, reason: SPA HTML catch-all}
+x-evidence:
+  fetched: '2026-08-02'
+  security_txt: none published on any Picarro host
+  agent_card: none — every 200 was an HTML catch-all, rejected per A2A probe rules

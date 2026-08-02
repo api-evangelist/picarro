@@ -1,0 +1,64 @@
+generated: '2026-08-02'
+method: probed
+source: https://identity-prod.picarro.com/auth/realms/picarro/.well-known/openid-configuration
+notes: >-
+  Picarro publishes no OpenAPI with oauth2 securitySchemes. These scopes are the
+  scopes_supported list advertised anonymously by the Keycloak realm that fronts the
+  P-Cubed cloud platform. They are the stock Keycloak/OIDC scope set — Picarro publishes
+  no product-specific API scope reference, and no public scopes documentation page was
+  found.
+schemes:
+  - name: PicarroIdentityOIDC
+    source: well-known/picarro-openid-configuration.json
+    issuer: https://identity-prod.picarro.com/auth/realms/picarro
+    flows:
+      - flow: authorizationCode
+        authorizationUrl: https://identity-prod.picarro.com/auth/realms/picarro/protocol/openid-connect/auth
+        tokenUrl: https://identity-prod.picarro.com/auth/realms/picarro/protocol/openid-connect/token
+      - flow: implicit
+        authorizationUrl: https://identity-prod.picarro.com/auth/realms/picarro/protocol/openid-connect/auth
+      - flow: password
+        tokenUrl: https://identity-prod.picarro.com/auth/realms/picarro/protocol/openid-connect/token
+      - flow: clientCredentials
+        tokenUrl: https://identity-prod.picarro.com/auth/realms/picarro/protocol/openid-connect/token
+scopes:
+  - scope: openid
+    description: OpenID Connect authentication; requests an ID token.
+    flows: [authorizationCode, implicit]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: profile
+    description: Standard OIDC profile claims (name, given_name, family_name, preferred_username).
+    flows: [authorizationCode, implicit, password]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: email
+    description: Standard OIDC email claim.
+    flows: [authorizationCode, implicit, password]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: address
+    description: Standard OIDC address claim.
+    flows: [authorizationCode, implicit, password]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: phone
+    description: Standard OIDC phone_number claims.
+    flows: [authorizationCode, implicit, password]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: roles
+    description: Keycloak realm/client role mappings in the access token.
+    flows: [authorizationCode, password, clientCredentials]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: offline_access
+    description: Issues a refresh token usable while the user is offline.
+    flows: [authorizationCode, password]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: web-origins
+    description: Keycloak scope that injects allowed CORS web origins into the token.
+    flows: [authorizationCode, implicit]
+    sources: [well-known/picarro-openid-configuration.json]
+  - scope: microprofile-jwt
+    description: Keycloak scope adding MicroProfile JWT claims (upn, groups).
+    flows: [authorizationCode, clientCredentials]
+    sources: [well-known/picarro-openid-configuration.json]
+x-evidence:
+  fetched: '2026-08-02'
+  url: https://identity-prod.picarro.com/auth/realms/picarro/.well-known/openid-configuration
+  http_status: 200

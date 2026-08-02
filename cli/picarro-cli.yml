@@ -1,0 +1,95 @@
+generated: '2026-08-02'
+method: searched
+source: https://github.com/picarro/sam-foup-public/blob/master/README.md
+notes: >-
+  Picarro ships a set of first-party command-line tools with the picarro-sam-foup-edge and
+  picarro-platform Debian packages. Each tool is a thin CLI over one gRPC service; every
+  command below is documented verbatim in the public README. Two interactive Python shells
+  (samshell, platformshell) preload the same gRPC clients.
+install:
+  - method: apt
+    command: sudo apt -y install ./releases/picarro-*.deb
+    requires: Debian 12 / Ubuntu 24.04 or newer
+    provides: [foup-api-tool, measurementset-api-tool, crds-api-tool, controller-api-tool, samshell, netconfig-tool, sysconfig-tool, vfs-tool, upgrade-tool, platformshell]
+  - method: pip
+    command: pip install picarro_sam_foup_edge_clients-5.0.0-py3-none-any.whl
+    requires: Python 3.9+ (any OS)
+    provides: [python -i -m picarro.sam.shell]
+global_flags:
+  - {flag: '--host=ADDRESS', description: 'Connect to a remote server (hostname, IPv4, or bracketed IPv6). Defaults to localhost.'}
+  - {flag: '--help', description: 'Detailed usage.'}
+  - {flag: '--help commands', description: 'Short synopsis of available subcommands.'}
+tools:
+  - name: foup-api-tool
+    service: picarro.sam.foup.FOUP
+    port: 3343
+    commands:
+      - {command: get_info, description: 'Report client and server API versions and the server name.', rpc: get_service_info}
+      - {command: 'start_job ACTION FOUP_ID DURATION MEASUREMENT_SET [extended]', description: 'Start a measurement; returns a unique Run ID.', rpc: start_job}
+      - {command: 'abort_job RUN_ID', description: 'Cancel the running measurement.', rpc: abort_job}
+      - {command: 'get_results RUN_ID', description: 'Retrieve results for a completed job.', rpc: get_result}
+      - {command: 'monitor [SIGNAL...]', description: 'Stream FOUP events (op_status, job_status, job_result, reprocessed_result, fdc_event).', rpc: watch}
+  - name: measurementset-api-tool
+    service: picarro.sam.ms.MeasurementSet
+    port: 3343
+    commands:
+      - {command: get_pool_of_cids, description: 'List the compound IDs available for measurement sets.', rpc: get_pool_of_cids}
+      - {command: get_all_measurement_sets, description: 'List every measurement set with detail.', rpc: get_all_measurement_sets}
+      - {command: get_active_measurement_sets, description: 'List currently active measurement sets.', rpc: get_active_measurement_sets}
+      - {command: 'add_measurement_set NAME CID...', description: 'Create a measurement set (cid 3776, Isopropyl Alcohol, is mandatory). 9 slots available.', rpc: add_measurement_set}
+      - {command: 'edit_measurement_set_by_name rename|update|redefine ...', description: 'Edit an inactive measurement set by name.', rpc: edit_measurement_set}
+      - {command: 'edit_measurement_set_by_number rename|update|redefine NUMBER ...', description: 'Edit an inactive measurement set by slot number 1-9.', rpc: edit_measurement_set}
+      - {command: 'activate_measurement_sets NAME...', description: 'Activate the named sets; all others are deactivated.', rpc: activate_measurement_sets}
+      - {command: 'deactivate_measurement_sets NAME...', description: 'Deactivate the named sets.', rpc: deactivate_measurement_sets}
+      - {command: get_suggested_measurement_sets, description: 'Measurement-set additions suggested from historical data.', rpc: get_suggested_measurement_sets}
+      - {command: sync_measurement_sets, description: 'Reconcile SAM computer measurement sets with the VOC analyzer. Destructive — capture get_all_measurement_sets first.', rpc: sync_measurement_sets}
+      - {command: monitor, description: 'Stream MeasurementSet events (ms_op_response, suggested_ms).', rpc: watch}
+  - name: controller-api-tool
+    service: picarro.sam.controller.Controller
+    port: 3343
+    commands:
+      - {command: 'monitor [analyzer_health] [analyzer_driver]', description: 'Stream SAM Core events including instrument health alerts.', rpc: watch}
+  - name: crds-api-tool
+    service: CRDS Data
+    port: 3343
+    commands:
+      - {command: '(see --help)', description: 'Retrieve detailed CRDS measurement data. Not available in simulation mode.'}
+  - name: netconfig-tool
+    service: picarro.platform.netconfig.NetConfig
+    port: 7528
+    commands:
+      - {command: '(see --help commands)', description: 'Access and manage hostname, connections, Wi-Fi access points, devices and radio state.'}
+  - name: sysconfig-tool
+    service: picarro.platform.sysconfig.SysConfig
+    port: 7528
+    commands:
+      - {command: '(see --help commands)', description: 'Product/version info, host name, current time, time configuration, timezone database, command invocation, reboot.'}
+  - name: vfs-tool
+    service: picarro.platform.vfs.VirtualFileSystem
+    port: 7528
+    commands:
+      - {command: '(see --help commands)', description: 'Access filesystem "contexts": download logs, upload upgrade packages.'}
+  - name: upgrade-tool
+    service: picarro.platform.upgrade.Upgrade
+    port: 7528
+    commands:
+      - {command: '(see --help commands)', description: 'Scan for and perform software upgrades from a Picarro .picpac release package.'}
+shells:
+  - name: samshell
+    launch: samshell
+    alt_launch: python -i -m picarro.sam.shell --host=ADDRESS
+    subsystems: [crds, crds_rest, foup, controller, measurementset]
+  - name: platformshell
+    launch: platformshell
+    subsystems: [sysconfig, netconfig, vfs, upgrade]
+third_party_ui:
+  - name: gRPC-UI
+    url: https://github.com/fullstorydev/grpcui
+    note: >-
+      Picarro Edge and Platform Server both enable gRPC reflection, so grpcui works
+      out of the box (grpcui -plaintext localhost:3343 / localhost:7528). Server
+      streaming (watch) is not usable from grpcui.
+x-evidence:
+  fetched: '2026-08-02'
+  url: https://raw.githubusercontent.com/picarro/sam-foup-public/master/README.md
+  http_status: 200
