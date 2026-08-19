@@ -3,158 +3,168 @@ method: derived
 status: candidate
 source: grpc/ (picarro/sam-foup-public ProtoBuf service definitions)
 provider_publishes_mcp: false
-search_result: >-
-  No official or community MCP server for Picarro was found. Probed the picarro GitHub org
-  (one public repo, sam-foup-public — no MCP code), npm (@modelcontextprotocol/* and
-  picarro/pcubed names all 404), and Picarro's docs and press releases. No /mcp endpoint
-  on any Picarro host.
-pointer_note: >-
-  NO `type: MCPServer` pointer is wired in apis.yml for this file. Picarro hosts no MCP
-  server; this document is an API Evangelist design candidate derived from Picarro's own
-  published gRPC contract, not a provider capability. Wiring the canonical pointer would
-  credit Picarro with an agent surface it does not operate.
+search_result: No official or community MCP server for Picarro was found. Probed the picarro GitHub org
+  (one public repo, sam-foup-public — no MCP code), npm (@modelcontextprotocol/* and picarro/pcubed names
+  all 404), and Picarro's docs and press releases. No /mcp endpoint on any Picarro host.
+pointer_note: 'NO `type: MCPServer` pointer is wired in apis.yml for this file. Picarro hosts no MCP server;
+  this document is an API Evangelist design candidate derived from Picarro''s own published gRPC contract,
+  not a provider capability. Wiring the canonical pointer would credit Picarro with an agent surface it
+  does not operate.'
 server:
   name: picarro-edge
   transport: stdio
   url: null
-  backing_surface: 'gRPC — picarro-edge on TCP 3343, platformserver on TCP 7528'
-  note: >-
-    Because the Picarro Edge servers run on the customer's own instrument network with
-    plaintext gRPC and no per-call credential, a realistic MCP server would be a local
-    stdio bridge that the operator points at a specific --host, not a Picarro-hosted
-    remote server.
-safety_note: >-
-  Several of these operations are physically consequential — start_job and abort_job drive
-  a measurement on real semiconductor cleanroom hardware, sync_measurement_sets can delete
-  configuration, install/finalize upgrade firmware, and reboot restarts the host. Any MCP
-  exposure should keep the write and control tools behind explicit human confirmation.
+  backing_surface: gRPC — picarro-edge on TCP 3343, platformserver on TCP 7528
+  note: Because the Picarro Edge servers run on the customer's own instrument network with plaintext gRPC
+    and no per-call credential, a realistic MCP server would be a local stdio bridge that the operator
+    points at a specific --host, not a Picarro-hosted remote server.
+safety_note: Several of these operations are physically consequential — start_job and abort_job drive
+  a measurement on real semiconductor cleanroom hardware, sync_measurement_sets can delete configuration,
+  install/finalize upgrade firmware, and reboot restarts the host. Any MCP exposure should keep the write
+  and control tools behind explicit human confirmation.
 tools:
-  - name: get_service_info
-    category: meta
-    description: Report the Edge server name and its ProtoBuf API version.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_service_info
-    consequence: read
-  - name: start_job
-    category: measurement
-    description: Start a FOUP measurement (action, foup_id, duration, measurement_set_name, optional extended flag). Returns a JobIdentity.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/start_job
-    consequence: physical
-  - name: abort_job
-    category: measurement
-    description: Cancel the current measurement; if a JobIdentity is supplied, cancel only if it matches.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/abort_job
-    consequence: physical
-  - name: get_job_result
-    category: measurement
-    description: Get results for a specified job, or the latest job when no identity is given.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_result
-    consequence: read
-  - name: get_reprocessed_results_by_ids
-    category: measurement
-    description: Get reprocessed results for a list of job identities.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_reprocessed_results_by_ids
-    consequence: read
-  - name: get_reprocessed_results_time_bound
-    category: measurement
-    description: Get reprocessed results within a time range; defaults to the past 24 hours.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_reprocessed_results_time_bound
-    consequence: read
-  - name: get_species_time_bound
-    category: measurement
-    description: List species measured within a time range; defaults to the past 24 hours.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_species_time_bound
-    consequence: read
-  - name: watch_foup_signals
-    category: events
-    description: Stream FOUP events (op_status, job_status, job_result, reprocessed_result, fdc_event) with a signal filter.
-    source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/watch
-    consequence: read
-    note: Server-streaming — needs an MCP notification or polling adapter.
-  - name: get_pool_of_cids
-    category: configuration
-    description: List the compound IDs available for measurement sets.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_pool_of_cids
-    consequence: read
-  - name: get_all_measurement_sets
-    category: configuration
-    description: List every measurement set with detail.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_all_measurement_sets
-    consequence: read
-  - name: get_active_measurement_sets
-    category: configuration
-    description: List currently active measurement sets.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_active_measurement_sets
-    consequence: read
-  - name: get_suggested_measurement_sets
-    category: configuration
-    description: Measurement-set additions suggested from historical data.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_suggested_measurement_sets
-    consequence: read
-  - name: add_measurement_set
-    category: configuration
-    description: Create a measurement set from a name and a cid list (cid 3776 mandatory; 9 slots).
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/add_measurement_set
-    consequence: write
-  - name: edit_measurement_set
-    category: configuration
-    description: Rename, update the cid list of, or redefine an inactive measurement set (by name or slot number).
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/edit_measurement_set
-    consequence: write
-  - name: activate_measurement_sets
-    category: configuration
-    description: Activate the named measurement sets; all others are deactivated.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/activate_measurement_sets
-    consequence: physical
-  - name: deactivate_measurement_sets
-    category: configuration
-    description: Deactivate the named measurement sets. Deactivating all halts the system.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/deactivate_measurement_sets
-    consequence: physical
-  - name: sync_measurement_sets
-    category: configuration
-    description: Reconcile SAM computer measurement sets with the VOC analyzer.
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/sync_measurement_sets
-    consequence: safety-critical
-    human_in_the_loop: required
-    note: Destructive — may remove sets or modify attributes. Capture get_all_measurement_sets first.
-  - name: watch_measurement_set_signals
-    category: events
-    description: Stream measurement-set operation events (ms_op_response, suggested_ms).
-    source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/watch
-    consequence: read
-  - name: watch_controller_signals
-    category: events
-    description: Stream SAM controller events including analyzer_health alerts and analyzer_driver_started.
-    source_operation: grpc/picarro-sam-foup-controller.proto#picarro.sam.controller.Controller/watch
-    consequence: read
-  - name: get_product_info
-    category: platform
-    description: Product model, serial number and version information for the host system.
-    source_operation: grpc/picarro-sam-foup-sysconfig.proto#picarro.platform.sysconfig.SysConfig/get_product_info
-    consequence: read
-  - name: get_host_info
-    category: platform
-    description: Host information for the SLIM computer.
-    source_operation: grpc/picarro-sam-foup-sysconfig.proto#picarro.platform.sysconfig.SysConfig/get_host_info
-    consequence: read
-  - name: get_network_connections
-    category: platform
-    description: List defined network connections.
-    source_operation: grpc/picarro-sam-foup-netconfig.proto#picarro.platform.netconfig.NetConfig/get_connections
-    consequence: read
-  - name: list_available_upgrades
-    category: platform
-    description: List Picarro release packages available from a package source.
-    source_operation: grpc/picarro-sam-foup-upgrade.proto#picarro.platform.upgrade.Upgrade/list_available
-    consequence: read
+- name: get_service_info
+  category: meta
+  description: Report the Edge server name and its ProtoBuf API version.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_service_info
+  consequence: read
+- name: start_job
+  category: measurement
+  description: Start a FOUP measurement (action, foup_id, duration, measurement_set_name, optional extended
+    flag). Returns a JobIdentity.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/start_job
+  consequence: physical
+- name: abort_job
+  category: measurement
+  description: Cancel the current measurement; if a JobIdentity is supplied, cancel only if it matches.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/abort_job
+  consequence: physical
+- name: get_job_result
+  category: measurement
+  description: Get results for a specified job, or the latest job when no identity is given.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_result
+  consequence: read
+- name: get_reprocessed_results_by_ids
+  category: measurement
+  description: Get reprocessed results for a list of job identities.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_reprocessed_results_by_ids
+  consequence: read
+- name: get_reprocessed_results_time_bound
+  category: measurement
+  description: Get reprocessed results within a time range; defaults to the past 24 hours.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_reprocessed_results_time_bound
+  consequence: read
+- name: get_species_time_bound
+  category: measurement
+  description: List species measured within a time range; defaults to the past 24 hours.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/get_species_time_bound
+  consequence: read
+- name: watch_foup_signals
+  category: events
+  description: Stream FOUP events (op_status, job_status, job_result, reprocessed_result, fdc_event) with
+    a signal filter.
+  source_operation: grpc/picarro-sam-foup-foup.proto#picarro.sam.foup.FOUP/watch
+  consequence: read
+  note: Server-streaming — needs an MCP notification or polling adapter.
+- name: get_pool_of_cids
+  category: configuration
+  description: List the compound IDs available for measurement sets.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_pool_of_cids
+  consequence: read
+- name: get_all_measurement_sets
+  category: configuration
+  description: List every measurement set with detail.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_all_measurement_sets
+  consequence: read
+- name: get_active_measurement_sets
+  category: configuration
+  description: List currently active measurement sets.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_active_measurement_sets
+  consequence: read
+- name: get_suggested_measurement_sets
+  category: configuration
+  description: Measurement-set additions suggested from historical data.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/get_suggested_measurement_sets
+  consequence: read
+- name: add_measurement_set
+  category: configuration
+  description: Create a measurement set from a name and a cid list (cid 3776 mandatory; 9 slots).
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/add_measurement_set
+  consequence: write
+- name: edit_measurement_set
+  category: configuration
+  description: Rename, update the cid list of, or redefine an inactive measurement set (by name or slot
+    number).
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/edit_measurement_set
+  consequence: write
+- name: activate_measurement_sets
+  category: configuration
+  description: Activate the named measurement sets; all others are deactivated.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/activate_measurement_sets
+  consequence: physical
+- name: deactivate_measurement_sets
+  category: configuration
+  description: Deactivate the named measurement sets. Deactivating all halts the system.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/deactivate_measurement_sets
+  consequence: physical
+- name: sync_measurement_sets
+  category: configuration
+  description: Reconcile SAM computer measurement sets with the VOC analyzer.
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/sync_measurement_sets
+  consequence: safety-critical
+  human_in_the_loop: required
+  note: Destructive — may remove sets or modify attributes. Capture get_all_measurement_sets first.
+- name: watch_measurement_set_signals
+  category: events
+  description: Stream measurement-set operation events (ms_op_response, suggested_ms).
+  source_operation: grpc/picarro-sam-foup-measurementset.proto#picarro.sam.ms.MeasurementSet/watch
+  consequence: read
+- name: watch_controller_signals
+  category: events
+  description: Stream SAM controller events including analyzer_health alerts and analyzer_driver_started.
+  source_operation: grpc/picarro-sam-foup-controller.proto#picarro.sam.controller.Controller/watch
+  consequence: read
+- name: get_product_info
+  category: platform
+  description: Product model, serial number and version information for the host system.
+  source_operation: grpc/picarro-sam-foup-sysconfig.proto#picarro.platform.sysconfig.SysConfig/get_product_info
+  consequence: read
+- name: get_host_info
+  category: platform
+  description: Host information for the SLIM computer.
+  source_operation: grpc/picarro-sam-foup-sysconfig.proto#picarro.platform.sysconfig.SysConfig/get_host_info
+  consequence: read
+- name: get_network_connections
+  category: platform
+  description: List defined network connections.
+  source_operation: grpc/picarro-sam-foup-netconfig.proto#picarro.platform.netconfig.NetConfig/get_connections
+  consequence: read
+- name: list_available_upgrades
+  category: platform
+  description: List Picarro release packages available from a package source.
+  source_operation: grpc/picarro-sam-foup-upgrade.proto#picarro.platform.upgrade.Upgrade/list_available
+  consequence: read
 excluded_from_tooling:
-  - {rpc: 'picarro.platform.sysconfig.SysConfig/reboot', reason: 'Reboots the host — safety-critical, should never be agent-invocable without an explicit operator gate.'}
-  - {rpc: 'picarro.platform.upgrade.Upgrade/install', reason: 'Installs firmware/software on live instrument hardware.'}
-  - {rpc: 'picarro.platform.upgrade.Upgrade/finalize', reason: 'Completes a firmware upgrade.'}
-  - {rpc: 'picarro.platform.sysconfig.SysConfig/invoke_sync', reason: 'Arbitrary command invocation on the host.'}
-  - {rpc: 'picarro.platform.sysconfig.SysConfig/invoke_async', reason: 'Arbitrary command invocation on the host.'}
-  - {rpc: 'picarro.platform.netconfig.NetConfig/deactivate_connection', reason: 'Can disconnect the instrument from the network it is being managed over.'}
+- rpc: picarro.platform.sysconfig.SysConfig/reboot
+  reason: Reboots the host — safety-critical, should never be agent-invocable without an explicit operator
+    gate.
+- rpc: picarro.platform.upgrade.Upgrade/install
+  reason: Installs firmware/software on live instrument hardware.
+- rpc: picarro.platform.upgrade.Upgrade/finalize
+  reason: Completes a firmware upgrade.
+- rpc: picarro.platform.sysconfig.SysConfig/invoke_sync
+  reason: Arbitrary command invocation on the host.
+- rpc: picarro.platform.sysconfig.SysConfig/invoke_async
+  reason: Arbitrary command invocation on the host.
+- rpc: picarro.platform.netconfig.NetConfig/deactivate_connection
+  reason: Can disconnect the instrument from the network it is being managed over.
 tool_count: 24
 x-evidence:
   fetched: '2026-08-02'
   source_repo: https://github.com/picarro/sam-foup-public
+deployment:
+  mode: none
+  verified: derived
+  tools: 24
+  checked: '2026-08-12'
+  source: catalog MCP census
