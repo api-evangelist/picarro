@@ -38,6 +38,19 @@ tags:
 - Methane
 - Greenhouse Gas
 - Scientific Instruments
+- Semiconductors
+- Industrial IoT
+- Sensors
+- Analytics
+- gRPC
+tags_raw:
+- Company
+- Gas Detection
+- Environmental Monitoring
+- Emissions
+- Methane
+- Greenhouse Gas
+- Scientific Instruments
 - Semiconductor
 - Industrial IoT
 - Sensors
@@ -67,7 +80,18 @@ apis:
     on TCP 3343 (E-D-G-E). There is no Picarro-hosted endpoint; clients pass
     --host=ADDRESS to reach a specific instrument. The base URL above is the documented
     default, not a public service.
-  tags: [gRPC, Protobuf, Semiconductor, Gas Detection, Events]
+  tags:
+  - gRPC
+  - Protobuf
+  - Semiconductors
+  - Gas Detection
+  - Event
+  tags_raw:
+  - gRPC
+  - Protobuf
+  - Semiconductor
+  - Gas Detection
+  - Events
   properties:
   - type: Protobuf
     url: grpc/picarro-sam-foup-foup.proto
@@ -139,7 +163,17 @@ apis:
     against the same realm over SAML 2.0.
   humanURL: https://pcubed.picarro.com/
   baseURL: https://identity-prod.picarro.com/auth/realms/picarro
-  tags: [Authentication, OpenID Connect, OAuth, SSO, Identity]
+  tags:
+  - Authentication
+  - OpenID Connect
+  - SSO
+  - Identity
+  tags_raw:
+  - Authentication
+  - OpenID Connect
+  - OAuth
+  - SSO
+  - Identity
   properties:
   - type: OpenIDConnect
     url: well-known/picarro-openid-configuration.json
