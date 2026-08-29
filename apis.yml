@@ -18,6 +18,18 @@ description: >-
   investigations, and — for semiconductor deployments — a publicly published gRPC/ProtoBuf
   interface (picarro/sam-foup-public) for external control and monitoring of Picarro Edge
   systems.
+deliveryModel:
+  model: unknown
+  open_source: unknown
+  commercial: true
+  callable_host: false
+  label: Delivery model not determined — needs a product licence on record
+  confidence: low
+  source:
+  - pricing
+  - repository-unlicensed
+  generated: '2026-08-28'
+  method: derived
 image: https://www.picarro.com/sites/default/files/picarro_logo.png
 url: https://raw.githubusercontent.com/api-evangelist/picarro/refs/heads/main/apis.yml
 x-type: company
