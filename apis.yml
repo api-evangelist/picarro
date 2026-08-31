@@ -50,7 +50,7 @@ tags:
 - Methane
 - Greenhouse Gas
 - Scientific Instruments
-- Semiconductors
+- Semiconductor
 - Industrial IoT
 - Sensors
 - Analytics
@@ -95,7 +95,7 @@ apis:
   tags:
   - gRPC
   - Protobuf
-  - Semiconductors
+  - Semiconductor
   - Gas Detection
   - Event
   tags_raw:
