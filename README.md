@@ -64,46 +64,126 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-Picarro, Inc. (Santa Clara, CA) builds high-precision gas concentration and stable-isotope
-analyzers based on Cavity Ring-Down Spectroscopy (CRDS), plus the cloud and mobile software
-that turns those measurements into operational decisions. It serves natural gas utilities,
-EtO sterilization facilities, refinery and chemical-plant fenceline monitoring,
-semiconductor cleanrooms, pharmaceutical manufacturing, and atmospheric research.
+Picarro, Inc. is a Santa Clara, California company that builds high-precision gas concentration and stable-isotope analyzers based on Cavity Ring-Down Spectroscopy (CRDS), together with the cloud software and mobile platforms that turn those measurements into operational decisions. Its instruments measure more than 700 compounds — methane, ethane, CO2, N2O, ammonia, ethylene oxide, hydrogen peroxide, water isotopes and cleanroom-level airborne molecular contamination — at parts-per- billion and parts-per-trillion sensitivity. Picarro serves natural gas utilities (mobile methane leak detection and the Picarro Surveyor programme), sterilization and EtO facilities, refinery and chemical-plant fenceline monitoring, semiconductor cleanrooms and FOUP contamination control, pharmaceutical manufacturing, and atmospheric and earth-science research. The company reports 25+ years of operation, 5,000+ instruments installed in about 100 countries, and 77 patents. Its software side is P-Cubed, a cloud data-processing and storage platform with a customer-facing API for custom data transformation routines, a companion mobile app for field leak investigations, and — for semiconductor deployments — a publicly published gRPC/ProtoBuf interface (picarro/sam-foup-public) for external control and monitoring of Picarro Edge systems.
 
-- https://www.picarro.com/
-- https://github.com/picarro/sam-foup-public
+**Areas:** Company · Gas Detection · Environmental Monitoring · Emissions · Methane · Greenhouse Gas · Scientific Instruments · Semiconductors · Industrial IoT · Sensors · Analytics · gRPC
 
-## API surface
+## Picarro on APIs.io
 
-Picarro's machine-readable contract is **gRPC/ProtoBuf**, published openly:
+Everything profiled for Picarro is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/picarro/](https://apis.io/providers/picarro/)** — or go straight to one of the APIs or properties below.
 
-| API | Transport | Contract |
-|---|---|---|
-| Picarro Edge — SAM FOUP | gRPC, TCP 3343 | `grpc/` — FOUP, MeasurementSet, Controller |
-| Picarro Platform Server | gRPC, TCP 7528 | `grpc/` — NetConfig, SysConfig, VirtualFileSystem, Upgrade |
-| Picarro Identity (P-Cubed SSO) | HTTPS | `well-known/picarro-openid-configuration.json` (Keycloak realm) |
-| Picarro P-Cubed Platform | HTTPS | no public specification |
+### APIs (4)
 
-There is **no OpenAPI, no GraphQL, no MCP server and no A2A agent card**. The Edge and
-Platform servers run on the customer's own instrument network with plaintext gRPC and no
-per-call authentication.
+- [Picarro Edge — SAM FOUP gRPC API](https://apis.io/apis/picarro/picarro-edge-sam-foup-grpc-api/) — The first-party gRPC/ProtoBuf interface Picarro publishes for external access to Picarro SAM (semiconductor airborne molecular contamination) systems. The…
+- [Picarro Platform Server API](https://apis.io/apis/picarro/picarro-platform-server-api/) — The gRPC interface to the host computer underneath a Picarro SAM deployment. `platformserver` exposes NetConfig for network connectivity and Wi-Fi…
+- [Picarro Identity (P-Cubed SSO)](https://apis.io/apis/picarro/picarro-identity-p-cubed-sso/) — The Keycloak-backed identity service that fronts the Picarro P-Cubed cloud platform. It publishes an anonymous OpenID Connect discovery document for the…
+- [Picarro P-Cubed Platform](https://apis.io/apis/picarro/picarro-p-cubed-platform/) — P-Cubed is Picarro's cloud data processing and storage platform. Picarro analyzers stream or batch data to it, customers interact with the results in a…
 
-## Artifacts in this repo
+### Published properties
 
-- `grpc/` — 11 `.proto` files mirrored verbatim from `picarro/sam-foup-public`
-- `asyncapi/` — AsyncAPI 3.0.0 **derived** from the ProtoBuf signal streams (Picarro
-  publishes none)
-- `well-known/` — the Keycloak OIDC discovery document plus the full probe record
-- `authentication/`, `scopes/` — OIDC/SAML/gRPC auth profile
-- `packages/`, `cli/`, `sandbox/` — Python wheels, Debian packages, eight CLIs, simulation mode
-- `conventions/`, `errors/`, `data-model/` — streaming semantics, the `picarro.status.Error`
-  contract, the entity graph
-- `conformance/`, `security/`, `lifecycle/`, `changelog/` — standards, certifications,
-  status page, version policy
-- `mcp/` — a **candidate** MCP tool design and the tool ↔ gRPC crosswalk (not hosted by Picarro)
-- `skills/`, `llms/` — three Agent Skills grounded in real gRPC methods, plus a generated llms.txt
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
 
-## Notable gaps
+#### AsyncAPI (1)
 
-Picarro completed SOC 2 Type 2 and ISO/IEC 27001:2022 / 27017 / 27018 in November 2025 but
-publishes **no security.txt, no responsible-disclosure policy and no bug bounty**.
+Event-driven and webhook contracts.
+
+- [Picarro Edge — SAM FOUP Signal Streams](https://apis.io/asyncapis/picarro/picarro-sam-foup-asyncapi/)
+
+#### Event channels (6)
+
+Individual events and webhooks the provider emits.
+
+- [picarro.platform.netconfig.NetConfig/watch](https://apis.io/channels/picarro/picarro-platform-netconfig-netconfig-watch/)
+- [picarro.platform.sysconfig.SysConfig/watch](https://apis.io/channels/picarro/picarro-platform-sysconfig-sysconfig-watch/)
+- [picarro.platform.upgrade.Upgrade/watch](https://apis.io/channels/picarro/picarro-platform-upgrade-upgrade-watch/)
+- [picarro.sam.controller.Controller/watch](https://apis.io/channels/picarro/picarro-sam-controller-controller-watch/)
+- [picarro.sam.foup.FOUP/watch](https://apis.io/channels/picarro/picarro-sam-foup-foup-watch/)
+- [picarro.sam.ms.MeasurementSet/watch](https://apis.io/channels/picarro/picarro-sam-ms-measurementset-watch/)
+
+#### Security (3)
+
+Authentication, trust centre, and vulnerability disclosure.
+
+- [Picarro Authentication](https://apis.io/security/picarro/picarro-authentication/)
+- [Picarro Domain Security](https://apis.io/security/picarro/picarro-domain-security/)
+- [Picarro Trust Center](https://apis.io/security/picarro/picarro-trust-center/)
+
+#### OAuth scopes (1)
+
+The permissions the API asks for.
+
+- [Picarro Scopes](https://apis.io/scopes/picarro/picarro-scopes/)
+
+## Where to find this API
+
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://www.picarro.com/)
+- [Documentation](https://github.com/picarro/sam-foup-public/blob/master/README.md)
+- [Getting started](https://github.com/picarro/sam-foup-public/blob/master/README.md#getting-started)
+- [API reference](https://github.com/picarro/sam-foup-public/tree/master/proto)
+- [Pricing](https://store.picarro.com/)
+- [Sign up](https://www.picarro.com/user/register)
+- [Support](https://www.picarro.com/support)
+- [Blog](https://www.picarro.com/company/press_releases)
+- [Compliance](https://www.picarro.com/ensuring_data_security_and_compliance)
+- [Trust centre](https://trust.picarro.com/)
+- [Terms of service](https://www.picarro.com/terms_of_service)
+- [Privacy policy](https://www.picarro.com/privacy_policy)
+- [GitHub](https://github.com/picarro)
+- [Status](https://status.picarro.com/status/gas)
+
+## API Evangelist rating
+
+**Kin Score 45.5** — developing · rubric 0.25.0 · scored 2026-10-23
+
+| Facet | Score |
+|---|---|
+| Discoverability | 62.5 |
+| Contract quality | 39.6 |
+| Contract governance | 4.5 |
+| Operational transparency | 34.2 |
+| Developer ergonomics | 42.3 |
+| Access clarity | 60.5 |
+
+**Agent readiness 30.8** — agent-ready
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | — |
+| Reversibility Documented | — |
+| MCP Server | — |
+| Auth Clarity | served (partial credit) |
+| Idempotency | — |
+| Error Semantics | derived (partial credit) |
+| OpenAPI Examples | — |
+| Rate Limit Signal | — |
+| Event Surface Described | derived (partial credit) |
+| Agent Skills | derived (partial credit) |
+| Well Known Catalog | — |
+| Consent Identity | — |
+| Agent Card | — |
+| Dry Run Mode | — |
+| Delegated Identity | served (partial credit) |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | yes |
+| Agentic Commerce | — |
+| Pagination Ratio | na |
+| Operation Distinctiveness | na |
+
+**Regulatory alignment 38.5** — Energy & Utilities
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/picarro/](https://apis.io/providers/picarro/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for Picarro: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/picarro/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
